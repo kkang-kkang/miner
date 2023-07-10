@@ -1,7 +1,7 @@
 import ReactDOM from "react-dom/client";
-import { LoadWasm } from "./LoadWasm";
+import { LoadWasm } from "./components/LoadWasm";
 import "./index.css";
-import App from "./App";
+import App from "./components/App";
 const root = ReactDOM.createRoot(
   document.getElementById("root") as HTMLElement
 );
