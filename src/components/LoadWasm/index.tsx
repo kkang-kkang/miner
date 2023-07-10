@@ -8,7 +8,7 @@ async function loadWasm(): Promise<void> {
   const goWasm = new window.Go();
   const result = await WebAssembly.instantiateStreaming(
     fetch("main.wasm"),
-    goWasm.importObject
+    goWasm.importObject,
   );
   goWasm.run(result.instance);
 }
