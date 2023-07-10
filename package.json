@@ -1,5 +1,5 @@
 {
-  "name": "my-app",
+  "name": "miner",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
@@ -10,6 +10,7 @@
     "@types/node": "^16.18.38",
     "@types/react": "^18.2.14",
     "@types/react-dom": "^18.2.6",
+    "@types/prettier": "9.19.0",
     "concurrently": "^7.6.0",
     "cra-template-typescript-golang": "1.0.0",
     "react": "^18.2.0",
