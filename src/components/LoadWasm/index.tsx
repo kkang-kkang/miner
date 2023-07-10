@@ -1,5 +1,5 @@
 import "./wasm_exec.js";
-import "./wasmTypes.js";
+import "./wasmTypes.d.ts";
 import "./LoadWasm.css";
 
 import React, { useEffect } from "react";
