@@ -31,7 +31,7 @@
     "watch:ts": "react-scripts start",
     "watch:wasm": "watch \"npm run build:wasm\" ./wasm",
     "build:ts": "react-scripts build",
-    "build:wasm": "cd wasm && GOOS=js GOARCH=wasm go build -o ../public/main.wasm && cd .. && echo \"\\033[0;32mcompiled wasm successfully!\\033[0m\""
+    "build:wasm": "cd wasm/cmd/miner && GOOS=js GOARCH=wasm go build -o ../../../public/main.wasm && cd .. && echo \"\\033[0;32mcompiled wasm successfully!\\033[0m\""
   },
   "eslintConfig": {
     "extends": [
