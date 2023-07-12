@@ -1,25 +1,25 @@
-import "./wasm_exec.js";
-import "./wasmTypes.d.ts";
 import "./LoadWasm.css";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 
-async function loadWasm(): Promise<void> {
-  const goWasm = new window.Go();
-  const result = await WebAssembly.instantiateStreaming(
-    fetch("main.wasm"),
-    goWasm.importObject,
-  );
-  goWasm.run(result.instance);
+function loadWasm(): Promise<void> {
+  return new Promise<void>((resolve) => {
+    const worker = new Worker(new URL("./wasmWorker.ts", import.meta.url));
+    worker.onmessage = () => {
+      resolve();
+    };
+  });
 }
 
 export const LoadWasm: React.FC<React.PropsWithChildren<{}>> = (props) => {
-  const [isLoading, setIsLoading] = React.useState(true);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    loadWasm().then(() => {
+    const load = async () => {
+      await loadWasm();
       setIsLoading(false);
-    });
+    };
+    load();
   }, []);
 
   if (isLoading) {
