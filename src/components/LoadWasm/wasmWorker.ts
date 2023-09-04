@@ -1,5 +1,6 @@
 import "./wasm_exec.js";
 import "./wasmTypes.d.ts";
+import { handleInput } from "./messages/input.js";
 
 async function initWasmWorker() {
   const goWasm = new self.Go();
@@ -9,6 +10,7 @@ async function initWasmWorker() {
   );
   goWasm.run(result.instance);
 
+  self.onmessage = handleInput;
   self.postMessage({});
 }
 

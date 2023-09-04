@@ -1,5 +1,10 @@
 package main
 
+import (
+	"miner/pkg/network"
+	"syscall/js"
+)
+
 func main() {
 
 	exposeWasmApis()
@@ -8,4 +13,6 @@ func main() {
 	<-make(chan struct{})
 }
 
-func exposeWasmApis() {}
+func exposeWasmApis() {
+	js.Global().Set("initRTCConnection", network.InitRTCConn())
+}
