@@ -9,7 +9,5 @@ export class Message<T> {
 }
 
 export enum MessageTypes {
-  INIT_RTC_CONN = "initRTCConneciton",
+  
 }
-
-export type EmptyMessage = {};

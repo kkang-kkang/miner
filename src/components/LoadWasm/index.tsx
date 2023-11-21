@@ -1,18 +1,26 @@
-import "./LoadWasm.css";
 import React, { useEffect, useState } from "react";
-import { handleOutput } from "./messages/output.js";
+import "./LoadWasm.css";
 import { CallbackEvent } from "./event";
 
 function loadWasm(): Promise<void> {
   return new Promise<void>((resolve) => {
-    const worker = new Worker(new URL("./wasmWorker.ts", import.meta.url));
+    const worker = new Worker(new URL("wasmWorker.ts", import.meta.url));
 
-    window.addEventListener("invoke", (event: Event | CallbackEvent) => {
-      (event as CallbackEvent).callback(worker);
+    worker.onerror = (ev) => {
+      console.error(ev);
+    };
+    worker.onmessageerror = (ev) => {
+      console.error(ev);
+    };
+
+    window.addEventListener("invoke", async (event) => {
+      const callbackEvent = event as CallbackEvent;
+      await callbackEvent.callback(worker);
+      callbackEvent.onCallbackExecuted(worker);
     });
 
     worker.onmessage = () => {
-      worker.onmessage = handleOutput;
+      worker.onmessage = () => {};
       resolve();
     };
   });

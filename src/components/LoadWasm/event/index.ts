@@ -1,5 +1,1 @@
-export {
-  CallbackEvent,
-  newCallbackEvent,
-  type callbackFunc,
-} from "./callbackEvent";
+export * from "./callbackEvent";

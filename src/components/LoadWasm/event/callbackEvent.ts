@@ -6,8 +6,6 @@ export type eventConstructorParams = {
   onCallbackExecuted: afterFunc;
 };
 
-export const CALLBACK_EVENT = "callback";
-
 export class CallbackEvent extends Event {
   constructor(
     type: string,

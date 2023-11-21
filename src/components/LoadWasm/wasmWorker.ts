@@ -1,6 +1,6 @@
-import "./wasm_exec.js";
+import { Message } from "./messages/messageTypes";
 import "./wasmTypes.d.ts";
-import { handleInput } from "./messages/input.js";
+import "./wasm_exec.js";
 
 async function initWasmWorker() {
   const goWasm = new self.Go();
@@ -10,8 +10,12 @@ async function initWasmWorker() {
   );
   goWasm.run(result.instance);
 
-  self.onmessage = handleInput;
-  self.postMessage({});
+  onmessage = (_: MessageEvent<Message<unknown>>): Promise<void> | void => {
+    // switch (event.data.type) {
+    // }
+  };
+
+  postMessage({});
 }
 
 initWasmWorker();
