@@ -43,19 +43,19 @@ func FindBlockHeader(ctx context.Context, blockHash []byte) (*block.Header, erro
 	return &dst, nil
 }
 
-func InsertBlockHeader(ctx context.Context, block *block.Block) error {
+func InsertBlockHeader(ctx context.Context, header *block.Header) error {
 	return withTx(idb.TransactionReadWrite, func(tranx *idb.Transaction) error {
 		objStore, err := tranx.ObjectStore(ObjStoreBlockHeader)
 		if err != nil {
 			return errors.Wrap(err, "failed to get object store")
 		}
 
-		b, err := json.Marshal(block.Header)
+		b, err := json.Marshal(header)
 		if err != nil {
 			return errors.Wrap(err, "failed to marshal block")
 		}
 
-		req, _ := objStore.AddKey(js.ValueOf(block.Header.CurHash), js.ValueOf(b))
+		req, _ := objStore.AddKey(js.ValueOf(header.CurHash), js.ValueOf(b))
 		if err := req.Await(ctx); err != nil {
 			return errors.Wrap(err, "request failed")
 		}

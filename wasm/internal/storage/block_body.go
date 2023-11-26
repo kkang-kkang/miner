@@ -43,19 +43,19 @@ func FindBlockBody(ctx context.Context, blockHash []byte) (*block.Body, error) {
 	return &dst, nil
 }
 
-func InsertBlockBody(ctx context.Context, block *block.Block) error {
+func InsertBlockBody(ctx context.Context, hash []byte, body *block.Body) error {
 	return withTx(idb.TransactionReadWrite, func(tranx *idb.Transaction) error {
 		objStore, err := tranx.ObjectStore(ObjStoreBlockBody)
 		if err != nil {
 			return errors.Wrap(err, "failed to get object store")
 		}
 
-		b, err := json.Marshal(block.Body)
+		b, err := json.Marshal(body)
 		if err != nil {
 			return errors.Wrap(err, "failed to marshal block")
 		}
 
-		req, _ := objStore.AddKey(js.ValueOf(block.Header.CurHash), js.ValueOf(b))
+		req, _ := objStore.AddKey(js.ValueOf(hash), js.ValueOf(b))
 		if err := req.Await(ctx); err != nil {
 			return errors.Wrap(err, "request failed")
 		}
