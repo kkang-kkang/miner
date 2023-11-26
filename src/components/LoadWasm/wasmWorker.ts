@@ -1,4 +1,4 @@
-import { Message } from "./messages/messageTypes";
+import { Message, MessageTypes } from "./messages/messageTypes";
 import "./wasmTypes.d.ts";
 import "./wasm_exec.js";
 
@@ -10,9 +10,13 @@ async function initWasmWorker() {
   );
   goWasm.run(result.instance);
 
-  onmessage = (_: MessageEvent<Message<unknown>>): Promise<void> | void => {
-    // switch (event.data.type) {
-    // }
+  onmessage = async (event: MessageEvent<Message<unknown>>): Promise<void> => {
+    switch (event.data.type) {
+      case MessageTypes.CREATE_TX: {
+        await self.createNewTx();
+        postMessage(MessageTypes.TX_CREATED, {});
+      }
+    }
   };
 
   postMessage({});
