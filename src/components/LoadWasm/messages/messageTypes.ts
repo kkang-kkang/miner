@@ -9,5 +9,6 @@ export class Message<T> {
 }
 
 export enum MessageTypes {
-  
+  CREATE_TX = "createTx",
+  TX_CREATED = "txCreated",
 }
