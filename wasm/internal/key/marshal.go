@@ -2,6 +2,7 @@ package key
 
 import (
 	"crypto/ecdsa"
+	"miner/internal/misc/util"
 
 	"github.com/pkg/errors"
 )
@@ -11,7 +12,7 @@ func MarshalECDSAPublicKey(key *ecdsa.PublicKey) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get ecdh key")
 	}
-	return ecdhKey.Bytes(), nil
+	return util.EncodeHex(ecdhKey.Bytes()), nil
 }
 
 func MarshalECDSAPrivateKey(key *ecdsa.PrivateKey) ([]byte, error) {
@@ -19,5 +20,5 @@ func MarshalECDSAPrivateKey(key *ecdsa.PrivateKey) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get ecdh key")
 	}
-	return ecdhKey.Bytes(), nil
+	return util.EncodeHex(ecdhKey.Bytes()), nil
 }
