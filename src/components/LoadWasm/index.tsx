@@ -16,7 +16,6 @@ function loadWasm(): Promise<void> {
     window.addEventListener("invoke", async (event) => {
       const callbackEvent = event as CallbackEvent;
       await callbackEvent.callback(worker);
-      callbackEvent.onCallbackExecuted(worker);
     });
 
     worker.onmessage = () => {
