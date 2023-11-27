@@ -8,6 +8,7 @@ import (
 	"github.com/hack-pad/go-indexeddb/idb"
 	"github.com/pkg/errors"
 
+	"miner/internal/hash"
 	"miner/internal/misc/util"
 	"miner/internal/tx"
 )
@@ -25,7 +26,11 @@ func PutTxToMempool(ctx context.Context, transaction *tx.Transaction) error {
 			return errors.Wrap(err, "failed to marshal transaction")
 		}
 
-		req, _ := objStore.AddKey(js.ValueOf(transaction.Hash), js.ValueOf(b))
+		req, _ := objStore.AddKey(
+			js.ValueOf(util.BytesToStr(transaction.Hash.ToHex())),
+			util.ToJSObject(b),
+		)
+
 		if err := req.Await(ctx); err != nil {
 			return errors.Wrap(err, "request failed")
 		}
@@ -37,7 +42,7 @@ func PutTxToMempool(ctx context.Context, transaction *tx.Transaction) error {
 }
 
 // DeleteTxsFromMempool deletes transactions from mempool.
-func DeleteTxsFromMempool(ctx context.Context, txHashes [][]byte) error {
+func DeleteTxsFromMempool(ctx context.Context, txHashes []hash.Hash) error {
 	return withTx(idb.TransactionReadWrite, func(tranx *idb.Transaction) error {
 		objStore, err := tranx.ObjectStore(ObjStoreMempool)
 		if err != nil {
@@ -45,7 +50,7 @@ func DeleteTxsFromMempool(ctx context.Context, txHashes [][]byte) error {
 		}
 
 		for _, hash := range txHashes {
-			objStore.Delete(js.ValueOf(hash))
+			objStore.Delete(js.ValueOf(hash.ToHex()))
 		}
 
 		if err := tranx.Await(ctx); err != nil {
@@ -59,7 +64,7 @@ func DeleteTxsFromMempool(ctx context.Context, txHashes [][]byte) error {
 }
 
 // FindTxsFromMempool finds transactions from mempool.
-func FindTxsFromMempool(ctx context.Context, txHashes [][]byte) ([]*tx.Transaction, error) {
+func FindTxsFromMempool(ctx context.Context, txHashes []hash.Hash) ([]*tx.Transaction, error) {
 	txs := make([]*tx.Transaction, 0, len(txHashes))
 	err := withTx(idb.TransactionReadWrite, func(tranx *idb.Transaction) error {
 		objStore, err := tranx.ObjectStore(ObjStoreMempool)
@@ -68,7 +73,7 @@ func FindTxsFromMempool(ctx context.Context, txHashes [][]byte) ([]*tx.Transacti
 		}
 
 		for _, hash := range txHashes {
-			req, _ := objStore.GetKey(js.ValueOf(hash))
+			req, _ := objStore.GetKey(js.ValueOf(util.BytesToStr(hash.ToHex())))
 			val, err := req.Await(ctx)
 			if err != nil {
 				return errors.Wrap(err, "request failed")

@@ -9,11 +9,12 @@ import (
 	"github.com/pkg/errors"
 
 	"miner/internal/block"
+	"miner/internal/hash"
 	"miner/internal/misc/util"
 )
 
 // FindBlockHeader finds block header of given blockHash
-func FindBlockHeader(ctx context.Context, blockHash []byte) (*block.Header, error) {
+func FindBlockHeader(ctx context.Context, blockHash hash.Hash) (*block.Header, error) {
 	var dst block.Header
 	err := withTx(idb.TransactionReadOnly, func(tranx *idb.Transaction) error {
 		objStore, err := tranx.ObjectStore(ObjStoreBlockHeader)
@@ -21,7 +22,7 @@ func FindBlockHeader(ctx context.Context, blockHash []byte) (*block.Header, erro
 			return errors.Wrap(err, "failed to get object store")
 		}
 
-		req, _ := objStore.Get(js.ValueOf(blockHash))
+		req, _ := objStore.Get(js.ValueOf(blockHash.ToHex()))
 		val, err := req.Await(ctx)
 		if err != nil {
 			return errors.Wrap(err, "request failed")
@@ -55,7 +56,11 @@ func InsertBlockHeader(ctx context.Context, header *block.Header) error {
 			return errors.Wrap(err, "failed to marshal block")
 		}
 
-		req, _ := objStore.AddKey(js.ValueOf(header.CurHash), js.ValueOf(b))
+		req, _ := objStore.AddKey(
+			js.ValueOf(util.BytesToStr(header.CurHash.ToHex())),
+			util.ToJSObject(b),
+		)
+
 		if err := req.Await(ctx); err != nil {
 			return errors.Wrap(err, "request failed")
 		}

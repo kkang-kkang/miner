@@ -9,12 +9,13 @@ import (
 	"github.com/hack-pad/go-indexeddb/idb"
 	"github.com/pkg/errors"
 
+	"miner/internal/hash"
 	"miner/internal/misc/util"
 	"miner/internal/tx"
 )
 
 // FindTx finds a transaction from the database.
-func FindTx(ctx context.Context, txHash []byte) (*tx.Transaction, error) {
+func FindTx(ctx context.Context, txHash hash.Hash) (*tx.Transaction, error) {
 	var dst tx.Transaction
 	err := withTx(idb.TransactionReadOnly, func(tranx *idb.Transaction) error {
 		objStore, err := tranx.ObjectStore(ObjStoreTransaction)
@@ -22,7 +23,7 @@ func FindTx(ctx context.Context, txHash []byte) (*tx.Transaction, error) {
 			return errors.Wrap(err, "failed to get object store")
 		}
 
-		req, _ := objStore.Get(js.ValueOf(txHash))
+		req, _ := objStore.Get(js.ValueOf(util.BytesToStr(txHash.ToHex())))
 		val, err := req.Await(ctx)
 		if err != nil {
 			return errors.Wrap(err, "request failed")
@@ -44,6 +45,42 @@ func FindTx(ctx context.Context, txHash []byte) (*tx.Transaction, error) {
 	}
 
 	return &dst, nil
+}
+
+func FindTxs(ctx context.Context, txHashes []hash.Hash) ([]*tx.Transaction, error) {
+	txs := make([]*tx.Transaction, len(txHashes))
+	err := withTx(idb.TransactionReadOnly, func(tranx *idb.Transaction) error {
+		objStore, err := tranx.ObjectStore(ObjStoreTransaction)
+		if err != nil {
+			return errors.Wrap(err, "failed to get object store")
+		}
+
+		for _, txHash := range txHashes {
+			req, _ := objStore.Get(js.ValueOf(util.BytesToStr(txHash.ToHex())))
+			val, err := req.Await(ctx)
+			if err != nil {
+				return errors.Wrap(err, "request failed")
+			}
+
+			marshaled := util.StrToBytes(val.String())
+
+			var dst tx.Transaction
+			if err := json.Unmarshal(marshaled, &dst); err != nil {
+				return errors.Wrap(err, "failed to unmarshal transaction")
+			}
+
+			txs = append(txs, &dst)
+		}
+		return nil
+	},
+		ObjStoreTransaction,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return txs, nil
 }
 
 // FindUTxOutputs finds unspent transaction outputs from database.
@@ -114,7 +151,10 @@ func InsertTxs(ctx context.Context, txs []*tx.Transaction) error {
 				return errors.Wrap(err, "failed to marshal transaction")
 			}
 
-			objStore.AddKey(js.ValueOf(tx.Hash), js.ValueOf(b))
+			objStore.AddKey(
+				js.ValueOf(util.BytesToStr(tx.Hash.ToHex())),
+				util.ToJSObject(b),
+			)
 		}
 
 		if err := tranx.Await(ctx); err != nil {
@@ -126,7 +166,7 @@ func InsertTxs(ctx context.Context, txs []*tx.Transaction) error {
 }
 
 // DeleteTxs deletes transactions.
-func DeleteTxs(ctx context.Context, txHashes [][]byte) error {
+func DeleteTxs(ctx context.Context, txHashes []hash.Hash) error {
 	return withTx(idb.TransactionReadWrite, func(tranx *idb.Transaction) error {
 		objStore, err := tranx.ObjectStore(ObjStoreTransaction)
 		if err != nil {
@@ -134,7 +174,7 @@ func DeleteTxs(ctx context.Context, txHashes [][]byte) error {
 		}
 
 		for _, hash := range txHashes {
-			objStore.Delete(js.ValueOf(hash))
+			objStore.Delete(js.ValueOf(util.BytesToStr(hash.ToHex())))
 		}
 
 		if err := tranx.Await(ctx); err != nil {
