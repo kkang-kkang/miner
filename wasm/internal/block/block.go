@@ -9,6 +9,8 @@ import (
 	"github.com/cbergoon/merkletree"
 	"github.com/pkg/errors"
 
+	"miner/internal/hash"
+	"miner/internal/misc/util"
 	"miner/internal/tx"
 )
 
@@ -18,20 +20,20 @@ const (
 
 // Header is header part of the block.
 type Header struct {
-	CurHash  []byte `json:"curHash"`
-	PrevHash []byte `json:"prevHash"`
+	CurHash  hash.Hash `json:"curHash"`
+	PrevHash hash.Hash `json:"prevHash"`
 
-	DataHash   []byte `json:"dataHash"`
-	Difficulty uint8  `json:"difficulty"`
-	Nonce      uint64 `json:"nonce"`
+	DataHash   hash.Hash `json:"dataHash"`
+	Difficulty uint8     `json:"difficulty"`
+	Nonce      uint64    `json:"nonce"`
 
 	Timestamp time.Time `json:"timestamp"`
 }
 
 // Body is body part of the block.
 type Body struct {
-	CoinbaseTxHash []byte            `json:"coinbaseTxHash"`
-	TxHashes       [][]byte          `json:"txHashes"`
+	CoinbaseTxHash hash.Hash         `json:"coinbaseTxHash"`
+	TxHashes       []hash.Hash       `json:"txHashes"`
 	CoinbaseTx     *tx.Transaction   `json:"coinbaseTx,omitempty"`
 	Txs            []*tx.Transaction `json:"txs,omitempty"`
 }
@@ -52,9 +54,11 @@ func New(minerAddr []byte, txs []*tx.Transaction, prevHash []byte) (*Block, erro
 		}},
 	}
 
-	if _, err := coinBaseTx.CalculateHash(); err != nil {
+	h, err := coinBaseTx.MakeHash()
+	if err != nil {
 		return nil, errors.Wrap(err, "failed to create hash of coinbaseTx")
 	}
+	coinBaseTx.Hash = h
 
 	block := &Block{
 		Header: &Header{PrevHash: prevHash},
@@ -62,7 +66,7 @@ func New(minerAddr []byte, txs []*tx.Transaction, prevHash []byte) (*Block, erro
 			CoinbaseTxHash: coinBaseTx.Hash,
 			CoinbaseTx:     coinBaseTx,
 			Txs:            txs,
-			TxHashes:       make([][]byte, 0, len(txs)),
+			TxHashes:       make([]hash.Hash, 0, len(txs)),
 		},
 	}
 
@@ -71,7 +75,7 @@ func New(minerAddr []byte, txs []*tx.Transaction, prevHash []byte) (*Block, erro
 		return nil, errors.Wrap(err, "merkle tree creation failed")
 	}
 
-	block.Header.DataHash = tree.MerkleRoot()
+	block.Header.DataHash = util.EncodeHex(tree.MerkleRoot())
 
 	for _, tx := range block.Body.Txs {
 		block.Body.TxHashes = append(block.Body.TxHashes, tx.Hash)

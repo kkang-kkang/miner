@@ -11,15 +11,16 @@ import (
 	"github.com/cbergoon/merkletree"
 	"github.com/pkg/errors"
 
+	"miner/internal/hash"
 	"miner/internal/key"
 )
 
 // TxInput is used in transaction to determine which transaction output
 // is used in this transaction.
 type TxInput struct {
-	TxHash    []byte `json:"txHash"`
-	OutIdx    uint16 `json:"outIdx"`
-	Signature []byte `json:"sig"`
+	TxHash    hash.Hash `json:"txHash"`
+	OutIdx    uint16    `json:"outIdx"`
+	Signature hash.Hash `json:"sig"`
 }
 
 func (in *TxInput) GetDataBytes() ([]byte, error) {
@@ -38,20 +39,20 @@ func (in *TxInput) GetDataBytes() ([]byte, error) {
 
 // TxOutput is result of the transaction.
 type TxOutput struct {
-	Addr   []byte `json:"addr"`
-	Amount uint64 `json:"amount"`
+	Addr   hash.Hash `json:"addr"`
+	Amount uint64    `json:"amount"`
 }
 
 // UTxOutput is unspent transaction output.
 type UTxOutput struct {
-	TxHash []byte
+	TxHash hash.Hash
 	OutIdx uint16
 	Amount uint64
 }
 
 // Transactions is data of the blockchain.
 type Transaction struct {
-	Hash    []byte      `json:"hash"`
+	Hash    hash.Hash   `json:"hash"`
 	Inputs  []*TxInput  `json:"inputs"`
 	Outputs []*TxOutput `json:"outputs"`
 }
@@ -106,7 +107,7 @@ func New(uTxOuts []*UTxOutput, amount uint64, privKey *ecdsa.PrivateKey, dstAddr
 		tx.Outputs = append(tx.Outputs, srcOut)
 	}
 
-	hash, err := tx.makeHash()
+	hash, err := tx.MakeHash()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to make hash of tx")
 	}
@@ -117,14 +118,14 @@ func New(uTxOuts []*UTxOutput, amount uint64, privKey *ecdsa.PrivateKey, dstAddr
 }
 
 func (tx *Transaction) ValidateHash() bool {
-	hash, err := tx.makeHash()
+	hash, err := tx.MakeHash()
 	if err != nil {
 		return false
 	}
 	return bytes.Equal(tx.Hash, hash)
 }
 
-func (tx *Transaction) makeHash() ([]byte, error) {
+func (tx *Transaction) MakeHash() ([]byte, error) {
 	hash := sha256.New()
 	buf := bytes.NewBuffer(nil)
 	enc := gob.NewEncoder(buf)
