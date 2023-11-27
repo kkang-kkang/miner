@@ -56,7 +56,7 @@ func FindTxs(ctx context.Context, txHashes []hash.Hash) ([]*tx.Transaction, erro
 		}
 
 		for _, txHash := range txHashes {
-			req, _ := objStore.Get(js.ValueOf(util.BytesToStr(txHash.ToHex())))
+			req, _ := objStore.Get(js.ValueOf(util.BytesToStr(txHash)))
 			val, err := req.Await(ctx)
 			if err != nil {
 				return errors.Wrap(err, "request failed")
@@ -166,7 +166,7 @@ func InsertTxs(ctx context.Context, txs []*tx.Transaction) error {
 }
 
 // DeleteTxs deletes transactions.
-func DeleteTxs(ctx context.Context, txHashes []hash.Hash) error {
+func DeleteTxs(ctx context.Context, txHashes [][]byte) error {
 	return withTx(idb.TransactionReadWrite, func(tranx *idb.Transaction) error {
 		objStore, err := tranx.ObjectStore(ObjStoreTransaction)
 		if err != nil {
@@ -174,7 +174,7 @@ func DeleteTxs(ctx context.Context, txHashes []hash.Hash) error {
 		}
 
 		for _, hash := range txHashes {
-			objStore.Delete(js.ValueOf(util.BytesToStr(hash.ToHex())))
+			objStore.Delete(js.ValueOf(util.BytesToStr(hash)))
 		}
 
 		if err := tranx.Await(ctx); err != nil {

@@ -11,6 +11,7 @@ import (
 
 	"miner/internal/key"
 	"miner/internal/misc/promise"
+	"miner/internal/misc/util"
 	"miner/internal/storage"
 	"miner/internal/tx"
 )
@@ -19,10 +20,26 @@ import (
 func createNewTx() any {
 	return js.FuncOf(func(this js.Value, args []js.Value) any {
 		return promise.New(promise.NewHandler(func(resolve, reject js.Value) any {
-			const amount = 1
-			srcAddr := []byte{}
-			dstAddr := []byte{}
-			privKey := &ecdsa.PrivateKey{}
+			candidate := args[0]
+
+			amount := uint64(candidate.Get("amount").Int())
+			privKeyBytes := util.StrToBytes(candidate.Get("privateKey").String())
+
+			srcAddr, err := util.DecodeHex(util.StrToBytes(candidate.Get("srcAddress").String()))
+			if err != nil {
+				return reject.Invoke(fmt.Sprintf("failed to decode hex: %v", err))
+			}
+
+			dstAddr, err := util.DecodeHex(util.StrToBytes(candidate.Get("dstAddress").String()))
+			if err != nil {
+				return reject.Invoke(fmt.Sprintf("failed to decode hex: %v", err))
+			}
+
+			privKey, err := key.ParseECDSAPrivateKey(privKeyBytes)
+			if err != nil {
+				return reject.Invoke(fmt.Sprintf("failed to parse private key: %v", err))
+			}
+
 			ctx := context.Background()
 
 			uTxOuts, got, err := storage.FindUTxOutputs(ctx, srcAddr, amount)
@@ -44,7 +61,7 @@ func createNewTx() any {
 			}
 
 			b, _ := json.Marshal(tx)
-			return resolve.Invoke(b)
+			return resolve.Invoke(util.ToJSObject(b))
 		}))
 	})
 }
@@ -52,14 +69,20 @@ func createNewTx() any {
 func insertBroadcastedTx() any {
 	return js.FuncOf(func(this js.Value, args []js.Value) any {
 		return promise.New(promise.NewHandler(func(resolve, reject js.Value) any {
-			ctx := context.Background()
-			transaction := &tx.Transaction{}
+			candidate := util.FromJSObject(args[0])
 
-			if err := validateTx(ctx, transaction); err != nil {
+			var transaction tx.Transaction
+			if err := json.Unmarshal(candidate, &transaction); err != nil {
+				return reject.Invoke(fmt.Sprintf("failed to unmarshal transaction: %v", err))
+			}
+
+			ctx := context.Background()
+
+			if err := validateTx(ctx, &transaction); err != nil {
 				return reject.Invoke(err.Error())
 			}
 
-			if err := storage.PutTxToMempool(ctx, transaction); err != nil {
+			if err := storage.PutTxToMempool(ctx, &transaction); err != nil {
 				return reject.Invoke(fmt.Sprintf("failed to put tx to mempool: %v", err))
 			}
 

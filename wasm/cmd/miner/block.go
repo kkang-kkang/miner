@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"syscall/js"
 
@@ -10,27 +11,40 @@ import (
 
 	"miner/internal/block"
 	"miner/internal/gpu"
+	"miner/internal/hash"
 	"miner/internal/misc/promise"
 	"miner/internal/misc/util"
 	"miner/internal/storage"
-	"miner/internal/tx"
 )
 
 func createBlock() any {
 	return js.FuncOf(func(this js.Value, args []js.Value) any {
 		return promise.New(promise.NewHandler(func(resolve, reject js.Value) any {
+			candidate := args[0]
+			hashStrings := candidate.Get("transactionHashes")
+
+			txHashes := make([]hash.Hash, hashStrings.Length())
+			for i := 0; i < len(txHashes); i++ {
+				h := hashStrings.Index(i).String()
+				txHashes[i] = hash.Hash(util.StrToBytes(h))
+			}
+
 			ctx := context.Background()
-			minerAddr := []byte{}
+
+			txs, err := storage.FindTxs(ctx, txHashes)
+			if err != nil {
+				return reject.Invoke(fmt.Sprintf("failed to find txs: %v", err))
+			}
+
+			// TODO: change this or whatever.
 			prevHash := []byte{}
-			var txs []*tx.Transaction
+			minerAddr := []byte{}
+			const difficulty = 6
 
 			block, err := block.New(minerAddr, txs, prevHash)
 			if err != nil {
 				return reject.Invoke(fmt.Sprintf("failed to create block: %v", err))
 			}
-
-			// TODO: change this or whatever.
-			const difficulty = 6
 
 			in, err := block.Header.MakeHashInput()
 			if err != nil {
@@ -59,9 +73,16 @@ func createBlock() any {
 func insertBroadcastedBlock() any {
 	return js.FuncOf(func(this js.Value, args []js.Value) any {
 		return promise.New(promise.NewHandler(func(resolve, reject js.Value) any {
-			ctx := context.Background()
-			block := &block.Block{}
+			candidate := args[0].String()
 
+			var block block.Block
+			if err := json.Unmarshal(util.StrToBytes(candidate), &block); err != nil {
+				return reject.Invoke(fmt.Sprintf("failed to unmarshal block: %v", err))
+			}
+
+			ctx := context.Background()
+
+			// TODO: should change this to real value.
 			var blockHeadHash = []byte{}
 			var difficulty uint8 = 0
 
@@ -97,7 +118,7 @@ func insertBroadcastedBlock() any {
 				}
 			}
 
-			if err := saveBlockToStorage(ctx, block); err != nil {
+			if err := saveBlockToStorage(ctx, &block); err != nil {
 				return reject.Invoke(err.Error())
 			}
 
@@ -138,7 +159,7 @@ func deleteTxInputs(ctx context.Context, block *block.Block) error {
 
 	for _, tx := range block.Body.Txs {
 		for _, in := range tx.Inputs {
-			txHashes = append(txHashes, in.TxHash)
+			txHashes = append(txHashes, in.TxHash.ToHex())
 		}
 	}
 

@@ -9,12 +9,11 @@ import (
 	"github.com/pkg/errors"
 
 	"miner/internal/block"
-	"miner/internal/hash"
 	"miner/internal/misc/util"
 )
 
 // FindBlockHeader finds block header of given blockHash
-func FindBlockHeader(ctx context.Context, blockHash hash.Hash) (*block.Header, error) {
+func FindBlockHeader(ctx context.Context, blockHash []byte) (*block.Header, error) {
 	var dst block.Header
 	err := withTx(idb.TransactionReadOnly, func(tranx *idb.Transaction) error {
 		objStore, err := tranx.ObjectStore(ObjStoreBlockHeader)
@@ -22,7 +21,7 @@ func FindBlockHeader(ctx context.Context, blockHash hash.Hash) (*block.Header, e
 			return errors.Wrap(err, "failed to get object store")
 		}
 
-		req, _ := objStore.Get(js.ValueOf(blockHash.ToHex()))
+		req, _ := objStore.Get(js.ValueOf(blockHash))
 		val, err := req.Await(ctx)
 		if err != nil {
 			return errors.Wrap(err, "request failed")

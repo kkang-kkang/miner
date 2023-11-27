@@ -57,8 +57,8 @@ func InsertBlockBody(ctx context.Context, hash hash.Hash, body *block.Body) erro
 		}
 
 		req, _ := objStore.AddKey(
-			js.ValueOf(hash.ToHex()),
-			js.ValueOf(util.ToJSObject(b)),
+			js.ValueOf(util.BytesToStr(hash.ToHex())),
+			util.ToJSObject(b),
 		)
 
 		if err := req.Await(ctx); err != nil {

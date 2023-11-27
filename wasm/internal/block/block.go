@@ -10,7 +10,6 @@ import (
 	"github.com/pkg/errors"
 
 	"miner/internal/hash"
-	"miner/internal/misc/util"
 	"miner/internal/tx"
 )
 
@@ -75,7 +74,7 @@ func New(minerAddr []byte, txs []*tx.Transaction, prevHash []byte) (*Block, erro
 		return nil, errors.Wrap(err, "merkle tree creation failed")
 	}
 
-	block.Header.DataHash = util.EncodeHex(tree.MerkleRoot())
+	block.Header.DataHash = tree.MerkleRoot()
 
 	for _, tx := range block.Body.Txs {
 		block.Body.TxHashes = append(block.Body.TxHashes, tx.Hash)
