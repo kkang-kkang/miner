@@ -18,4 +18,5 @@ export enum MessageTypes {
   BLOCK_CREATED = "blockCreated",
   INSERT_BLOCK = "insertBlock",
   BLOCK_INSERTED = "blockInserted",
+  BLOCK_CANDIDATE = "blockCandidate",
 }
