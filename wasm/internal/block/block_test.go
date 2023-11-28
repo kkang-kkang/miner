@@ -88,7 +88,7 @@ func TestNew(t *testing.T) {
 		},
 	}
 
-	b, err := block.New(myAddr, txs, prevHash)
+	b, err := block.New(myAddr, txs, prevHash, 0)
 	if !assert.NoError(t, err) {
 		return
 	}

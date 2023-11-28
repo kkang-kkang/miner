@@ -31,8 +31,8 @@ type Header struct {
 
 // Body is body part of the block.
 type Body struct {
-	CoinbaseTxHash hash.Hash         `json:"coinbaseTxHash"`
-	TxHashes       []hash.Hash       `json:"txHashes"`
+	CoinbaseTxHash hash.Hash         `json:"coinbaseTxHash,omitempty"`
+	TxHashes       []hash.Hash       `json:"txHashes,omitempty"`
 	CoinbaseTx     *tx.Transaction   `json:"coinbaseTx,omitempty"`
 	Txs            []*tx.Transaction `json:"txs,omitempty"`
 }
@@ -44,9 +44,12 @@ type Block struct {
 
 // New creates new block from given arguments.
 // You still have to configure [nonce, hash, difficulty].
-func New(minerAddr []byte, txs []*tx.Transaction, prevHash []byte) (*Block, error) {
+func New(minerAddr []byte, txs []*tx.Transaction, prevHash []byte, difficulty uint8) (*Block, error) {
 	coinBaseTx := &tx.Transaction{
-		Inputs: []*tx.TxInput{},
+		Inputs: []*tx.TxInput{{
+			TxHash: tx.COINBASE,
+			OutIdx: 0,
+		}},
 		Outputs: []*tx.TxOutput{{
 			Addr:   minerAddr,
 			Amount: BlockMiningPrize * uint64(len(txs)), // TODO: change this to actual algorithm.
@@ -60,7 +63,7 @@ func New(minerAddr []byte, txs []*tx.Transaction, prevHash []byte) (*Block, erro
 	coinBaseTx.Hash = h
 
 	block := &Block{
-		Header: &Header{PrevHash: prevHash},
+		Header: &Header{PrevHash: prevHash, Difficulty: difficulty},
 		Body: &Body{
 			CoinbaseTxHash: coinBaseTx.Hash,
 			CoinbaseTx:     coinBaseTx,

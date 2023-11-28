@@ -15,6 +15,8 @@ import (
 	"miner/internal/key"
 )
 
+var COINBASE hash.Hash = []byte("COINBASE")
+
 // TxInput is used in transaction to determine which transaction output
 // is used in this transaction.
 type TxInput struct {
