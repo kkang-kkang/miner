@@ -27,9 +27,7 @@ func FindBlockHeader(ctx context.Context, blockHash []byte) (*block.Header, erro
 			return errors.Wrap(err, "request failed")
 		}
 
-		marshaled := util.StrToBytes(val.String())
-
-		if err := json.Unmarshal(marshaled, &dst); err != nil {
+		if err := json.Unmarshal(util.FromJSObject(val), &dst); err != nil {
 			return errors.Wrap(err, "failed to unmarshal block")
 		}
 
@@ -55,14 +53,10 @@ func InsertBlockHeader(ctx context.Context, header *block.Header) error {
 			return errors.Wrap(err, "failed to marshal block")
 		}
 
-		req, _ := objStore.AddKey(
+		objStore.AddKey(
 			js.ValueOf(util.BytesToStr(header.CurHash.ToHex())),
 			util.ToJSObject(b),
 		)
-
-		if err := req.Await(ctx); err != nil {
-			return errors.Wrap(err, "request failed")
-		}
 
 		return nil
 	}, ObjStoreBlockHeader)

@@ -26,14 +26,10 @@ func PutTxToMempool(ctx context.Context, transaction *tx.Transaction) error {
 			return errors.Wrap(err, "failed to marshal transaction")
 		}
 
-		req, _ := objStore.AddKey(
+		objStore.AddKey(
 			js.ValueOf(util.BytesToStr(transaction.Hash.ToHex())),
 			util.ToJSObject(b),
 		)
-
-		if err := req.Await(ctx); err != nil {
-			return errors.Wrap(err, "request failed")
-		}
 
 		return nil
 	},
@@ -50,11 +46,7 @@ func DeleteTxsFromMempool(ctx context.Context, txHashes []hash.Hash) error {
 		}
 
 		for _, hash := range txHashes {
-			objStore.Delete(js.ValueOf(hash.ToHex()))
-		}
-
-		if err := tranx.Await(ctx); err != nil {
-			return errors.Wrap(err, "request failed")
+			objStore.Delete(js.ValueOf(util.BytesToStr(hash.ToHex())))
 		}
 
 		return nil
@@ -73,16 +65,18 @@ func FindTxsFromMempool(ctx context.Context, txHashes []hash.Hash) ([]*tx.Transa
 		}
 
 		for _, hash := range txHashes {
-			req, _ := objStore.GetKey(js.ValueOf(util.BytesToStr(hash.ToHex())))
+			req, _ := objStore.Get(js.ValueOf(util.BytesToStr(hash)))
 			val, err := req.Await(ctx)
 			if err != nil {
 				return errors.Wrap(err, "request failed")
 			}
 
-			marshaled := util.StrToBytes(val.String())
+			if val.IsUndefined() {
+				return errors.Errorf("value not found with hash: %s", hash)
+			}
 
 			var dst tx.Transaction
-			if err := json.Unmarshal(marshaled, &dst); err != nil {
+			if err := json.Unmarshal(util.FromJSObject(val), &dst); err != nil {
 				return errors.Wrap(err, "failed to unmarshal transaction")
 			}
 

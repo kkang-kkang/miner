@@ -29,9 +29,7 @@ func FindTx(ctx context.Context, txHash hash.Hash) (*tx.Transaction, error) {
 			return errors.Wrap(err, "request failed")
 		}
 
-		marshaled := util.StrToBytes(val.String())
-
-		if err := json.Unmarshal(marshaled, &dst); err != nil {
+		if err := json.Unmarshal(util.FromJSObject(val), &dst); err != nil {
 			return errors.Wrap(err, "failed to unmarshal transaction")
 		}
 
@@ -45,42 +43,6 @@ func FindTx(ctx context.Context, txHash hash.Hash) (*tx.Transaction, error) {
 	}
 
 	return &dst, nil
-}
-
-func FindTxs(ctx context.Context, txHashes []hash.Hash) ([]*tx.Transaction, error) {
-	txs := make([]*tx.Transaction, len(txHashes))
-	err := withTx(idb.TransactionReadOnly, func(tranx *idb.Transaction) error {
-		objStore, err := tranx.ObjectStore(ObjStoreTransaction)
-		if err != nil {
-			return errors.Wrap(err, "failed to get object store")
-		}
-
-		for _, txHash := range txHashes {
-			req, _ := objStore.Get(js.ValueOf(util.BytesToStr(txHash)))
-			val, err := req.Await(ctx)
-			if err != nil {
-				return errors.Wrap(err, "request failed")
-			}
-
-			marshaled := util.StrToBytes(val.String())
-
-			var dst tx.Transaction
-			if err := json.Unmarshal(marshaled, &dst); err != nil {
-				return errors.Wrap(err, "failed to unmarshal transaction")
-			}
-
-			txs = append(txs, &dst)
-		}
-		return nil
-	},
-		ObjStoreTransaction,
-	)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return txs, nil
 }
 
 // FindUTxOutputs finds unspent transaction outputs from database.
@@ -101,10 +63,8 @@ func FindUTxOutputs(ctx context.Context, pubKey []byte, amount uint64) (_ []*tx.
 				return errors.Wrap(err, "failed to get value")
 			}
 
-			marshaled := util.StrToBytes(val.String())
-
 			var transaction tx.Transaction
-			if err := json.Unmarshal(marshaled, &transaction); err != nil {
+			if err := json.Unmarshal(util.FromJSObject(val), &transaction); err != nil {
 				return errors.Wrap(err, "failed to unmarshal transaction")
 			}
 
@@ -157,10 +117,6 @@ func InsertTxs(ctx context.Context, txs []*tx.Transaction) error {
 			)
 		}
 
-		if err := tranx.Await(ctx); err != nil {
-			return errors.Wrap(err, "request failed")
-		}
-
 		return nil
 	}, ObjStoreTransaction)
 }
@@ -175,10 +131,6 @@ func DeleteTxs(ctx context.Context, txHashes [][]byte) error {
 
 		for _, hash := range txHashes {
 			objStore.Delete(js.ValueOf(util.BytesToStr(hash)))
-		}
-
-		if err := tranx.Await(ctx); err != nil {
-			return errors.Wrap(err, "request failed")
 		}
 
 		return nil

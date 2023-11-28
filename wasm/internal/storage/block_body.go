@@ -28,9 +28,7 @@ func FindBlockBody(ctx context.Context, blockHash hash.Hash) (*block.Body, error
 			return errors.Wrap(err, "request failed")
 		}
 
-		marshaled := util.StrToBytes(val.String())
-
-		if err := json.Unmarshal(marshaled, &dst); err != nil {
+		if err := json.Unmarshal(util.FromJSObject(val), &dst); err != nil {
 			return errors.Wrap(err, "failed to unmarshal block")
 		}
 
@@ -56,14 +54,10 @@ func InsertBlockBody(ctx context.Context, hash hash.Hash, body *block.Body) erro
 			return errors.Wrap(err, "failed to marshal block")
 		}
 
-		req, _ := objStore.AddKey(
+		objStore.AddKey(
 			js.ValueOf(util.BytesToStr(hash.ToHex())),
 			util.ToJSObject(b),
 		)
-
-		if err := req.Await(ctx); err != nil {
-			return errors.Wrap(err, "request failed")
-		}
 
 		return nil
 	}, ObjStoreBlockBody)
