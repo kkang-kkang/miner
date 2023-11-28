@@ -1,6 +1,8 @@
 package main
 
-import "syscall/js"
+import (
+	"syscall/js"
+)
 
 func main() {
 	js.Global().Set("createNewTx", createNewTx())

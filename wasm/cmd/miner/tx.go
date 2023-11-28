@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"encoding/json"
@@ -78,7 +79,7 @@ func insertBroadcastedTx() any {
 
 			ctx := context.Background()
 
-			if err := validateTx(ctx, &transaction); err != nil {
+			if _, err := validateTx(ctx, &transaction); err != nil {
 				return reject.Invoke(err.Error())
 			}
 
@@ -91,32 +92,36 @@ func insertBroadcastedTx() any {
 	})
 }
 
-func validateTx(ctx context.Context, transaction *tx.Transaction) error {
+func validateTx(ctx context.Context, transaction *tx.Transaction) (isCoinbase bool, err error) {
 	if isValid := transaction.ValidateHash(); !isValid {
-		return errors.New("transaction hash is not valid")
+		return false, errors.New("transaction hash is not valid")
+	}
+
+	if len(transaction.Inputs) > 0 && bytes.Equal(transaction.Inputs[0].TxHash, tx.COINBASE) {
+		return true, nil
 	}
 
 	var sum uint64
 	for _, in := range transaction.Inputs {
 		tx, err := storage.FindTx(ctx, in.TxHash)
 		if err != nil {
-			return errors.Wrap(err, "failed to find transaction")
+			return false, errors.Wrap(err, "failed to find transaction")
 		}
 
 		if int(in.OutIdx) >= len(tx.Outputs) {
-			return errors.New("outIdx cannot be reached")
+			return false, errors.New("outIdx cannot be reached")
 		}
 
 		out := tx.Outputs[in.OutIdx]
 
 		publicKey, err := key.ParseECDSAPublicKey(out.Addr)
 		if err != nil {
-			return errors.Wrap(err, "failed to parse ecdsa public key")
+			return false, errors.Wrap(err, "failed to parse ecdsa public key")
 		}
 
 		valid := ecdsa.VerifyASN1(publicKey, tx.Hash, in.Signature)
 		if !valid {
-			return errors.New("signature is not valid")
+			return false, errors.New("signature is not valid")
 		}
 
 		sum += out.Amount
@@ -127,8 +132,8 @@ func validateTx(ctx context.Context, transaction *tx.Transaction) error {
 	}
 
 	if sum != 0 {
-		return errors.New("tx input and output does not match")
+		return false, errors.New("tx input and output does not match")
 	}
 
-	return nil
+	return false, nil
 }

@@ -31,17 +31,17 @@ func createBlock() any {
 
 			ctx := context.Background()
 
-			txs, err := storage.FindTxs(ctx, txHashes)
+			txs, err := storage.FindTxsFromMempool(ctx, txHashes)
 			if err != nil {
 				return reject.Invoke(fmt.Sprintf("failed to find txs: %v", err))
 			}
 
 			// TODO: change this or whatever.
-			prevHash := []byte{}
-			minerAddr := []byte{}
+			prevHash := []byte("ffffffffffff")
+			minerAddr := []byte("ffffffffffff")
 			const difficulty = 6
 
-			block, err := block.New(minerAddr, txs, prevHash)
+			block, err := block.New(minerAddr, txs, prevHash, difficulty)
 			if err != nil {
 				return reject.Invoke(fmt.Sprintf("failed to create block: %v", err))
 			}
@@ -54,8 +54,8 @@ func createBlock() any {
 			_, candidateStream, result := gpu.FindNonce(ctx, in, difficulty)
 			for block.Header.CurHash == nil {
 				select {
-				case <-candidateStream:
-					// TODO: throw this to ui.
+				case candidate := <-candidateStream:
+					go dispatchCandidateEvent(candidate)
 				case r := <-result:
 					block.Header.CurHash = r.Hash
 					block.Header.Nonce = r.Nonce
@@ -65,7 +65,11 @@ func createBlock() any {
 				return reject.Invoke(err.Error())
 			}
 
-			return resolve.Invoke()
+			block.Body.CoinbaseTxHash = nil
+			block.Body.TxHashes = nil
+
+			b, _ := json.Marshal(block)
+			return resolve.Invoke(util.ToJSObject(b))
 		}))
 	})
 }
@@ -73,18 +77,18 @@ func createBlock() any {
 func insertBroadcastedBlock() any {
 	return js.FuncOf(func(this js.Value, args []js.Value) any {
 		return promise.New(promise.NewHandler(func(resolve, reject js.Value) any {
-			candidate := args[0].String()
+			candidate := util.FromJSObject(args[0])
 
 			var block block.Block
-			if err := json.Unmarshal(util.StrToBytes(candidate), &block); err != nil {
+			if err := json.Unmarshal(candidate, &block); err != nil {
 				return reject.Invoke(fmt.Sprintf("failed to unmarshal block: %v", err))
 			}
 
 			ctx := context.Background()
 
 			// TODO: should change this to real value.
-			var blockHeadHash = []byte{}
-			var difficulty uint8 = 0
+			var blockHeadHash = []byte("ffffffffffff")
+			var difficulty uint8 = 6
 
 			if !bytes.Equal(block.Header.PrevHash, blockHeadHash) {
 				return reject.Invoke("block is not up-to-date")
@@ -112,10 +116,29 @@ func insertBroadcastedBlock() any {
 				return reject.Invoke("block's data hash is not valid")
 			}
 
+			coinbaseFound := false
 			for _, tx := range append(block.Body.Txs, block.Body.CoinbaseTx) {
-				if err := validateTx(ctx, tx); err != nil {
+				isCoinbase, err := validateTx(ctx, tx)
+				if err != nil {
 					return reject.Invoke(fmt.Sprintf("transaction is not valid: %v", err))
 				}
+
+				if isCoinbase {
+					if coinbaseFound {
+						return reject.Invoke("coinbase already found")
+					}
+
+					if tx.Outputs[0].Amount != uint64(len(block.Body.Txs)*10) {
+						return reject.Invoke("coinbase transaction is fake")
+					}
+
+					coinbaseFound = true
+				}
+			}
+
+			block.Body.CoinbaseTxHash = block.Body.CoinbaseTx.Hash
+			for _, tx := range block.Body.Txs {
+				block.Body.TxHashes = append(block.Body.TxHashes, tx.Hash)
 			}
 
 			if err := saveBlockToStorage(ctx, &block); err != nil {
@@ -135,6 +158,7 @@ func saveBlockToStorage(ctx context.Context, block *block.Block) error {
 	newBlockBody := *block.Body
 	newBlockBody.CoinbaseTx = nil
 	newBlockBody.Txs = nil
+
 	if err := storage.InsertBlockBody(ctx, block.Header.CurHash, &newBlockBody); err != nil {
 		return errors.Wrap(err, "failed to insert block body")
 	}
@@ -171,4 +195,11 @@ func deleteTxInputs(ctx context.Context, block *block.Block) error {
 	}
 
 	return nil
+}
+
+func dispatchCandidateEvent(candidate hash.Hash) {
+	event := js.Global().Get("MessageEvent").
+		New("blockCandidate", map[string]interface{}{"data": util.BytesToStr(candidate.ToHex())})
+
+	js.Global().Call("dispatchEvent", event)
 }
