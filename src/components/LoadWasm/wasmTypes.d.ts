@@ -27,12 +27,27 @@ declare global {
     outputs: TxOut[];
   };
 
+  export type Block = {
+    header: {
+      curHash: string;
+      prevHash: string;
+      dataHash: string;
+      difficulty: number;
+      nonce: number;
+      timestamp: string;
+    };
+    body: {
+      coinbaseTx: Transaction;
+      txs: Transaction[];
+    };
+  };
+
   export interface Window {
     Go: any;
     createNewTx: (input: TxCandidate) => Promise<Transaction>;
-    createBlock: (input: BlockCandidate) => Promise<void>;
-    insertBroadcastedTx: (candidate: string) => Promise<void>;
-    insertBroadcastedBlock: (candidate: string) => Promise<void>;
+    createBlock: (input: BlockCandidate) => Promise<Block>;
+    insertBroadcastedTx: (candidate: Transaction) => Promise<void>;
+    insertBroadcastedBlock: (candidate: Block) => Promise<void>;
   }
 }
 

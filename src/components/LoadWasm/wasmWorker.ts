@@ -18,22 +18,27 @@ async function initWasmWorker() {
         break;
       }
       case MessageTypes.CREATE_BLOCK: {
-        await self.createBlock(event.data.data as BlockCandidate);
-        postMessage(new Message(MessageTypes.BLOCK_CREATED, {}));
+        const val = await self.createBlock(event.data.data as BlockCandidate);
+        postMessage(new Message(MessageTypes.BLOCK_CREATED, val));
         break;
       }
       case MessageTypes.INSERT_TX: {
-        await self.insertBroadcastedTx(event.data.data as string);
+        await self.insertBroadcastedTx(event.data.data as Transaction);
         postMessage(new Message(MessageTypes.TX_INSERTED, {}));
         break;
       }
       case MessageTypes.INSERT_BLOCK: {
-        await self.insertBroadcastedBlock(event.data.data as string);
+        await self.insertBroadcastedBlock(event.data.data as Block);
         postMessage(new Message(MessageTypes.BLOCK_INSERTED, {}));
         break;
       }
     }
   };
+
+  addEventListener(MessageTypes.BLOCK_CANDIDATE, (event: Event) => {
+    const msgEvent = event as MessageEvent<string>;
+    postMessage(new Message(MessageTypes.BLOCK_CANDIDATE, msgEvent.data));
+  });
 
   postMessage({});
 }
