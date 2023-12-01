@@ -48,6 +48,8 @@ declare global {
     createBlock: (input: BlockCandidate) => Promise<Block>;
     insertBroadcastedTx: (candidate: Transaction) => Promise<void>;
     insertBroadcastedBlock: (candidate: Block) => Promise<void>;
+
+    getDevice: () => any;
   }
 }
 

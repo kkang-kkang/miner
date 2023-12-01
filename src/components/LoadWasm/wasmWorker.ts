@@ -40,7 +40,31 @@ async function initWasmWorker() {
     postMessage(new Message(MessageTypes.BLOCK_CANDIDATE, msgEvent.data));
   });
 
+  await initGPU();
+
   postMessage({});
+}
+
+async function initGPU() {
+  if (!navigator.gpu) {
+    throw new Error("WebGPU not suppored :(");
+  }
+
+  const adapter = await navigator.gpu.requestAdapter({
+    powerPreference: "high-performance",
+  });
+  if (!adapter) {
+    throw new Error("No WebGPU adapter available :(");
+  }
+
+  const device = await adapter.requestDevice();
+  if (!device) {
+    throw new Error("No Device available :(");
+  }
+
+  self.getDevice = () => {
+    return device;
+  };
 }
 
 initWasmWorker();
