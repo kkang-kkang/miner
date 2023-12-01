@@ -10,10 +10,10 @@ import (
 	"github.com/pkg/errors"
 
 	"miner/internal/block"
-	"miner/internal/gpu"
 	"miner/internal/hash"
 	"miner/internal/misc/promise"
 	"miner/internal/misc/util"
+	"miner/internal/processor"
 	"miner/internal/storage"
 )
 
@@ -51,7 +51,7 @@ func createBlock() any {
 				return reject.Invoke(fmt.Sprintf("failed to make hash input: %v", err))
 			}
 
-			_, candidateStream, result := gpu.FindNonce(ctx, in, difficulty)
+			_, candidateStream, result := processor.FindNonceUsingCPU(ctx, in, difficulty)
 			for block.Header.CurHash == nil {
 				select {
 				case candidate := <-candidateStream:
