@@ -29,11 +29,7 @@ export const LoadWasm: React.FC<React.PropsWithChildren<{}>> = (props) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const load = async () => {
-      await loadWasm();
-      setIsLoading(false);
-    };
-    load();
+    loadWasm().then(() => setIsLoading(false));
   }, []);
 
   if (isLoading) {
