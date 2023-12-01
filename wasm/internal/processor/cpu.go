@@ -1,4 +1,4 @@
-package gpu
+package processor
 
 import (
 	"context"
@@ -17,7 +17,7 @@ type Result struct {
 }
 
 // TODO: this should be refactored.
-func FindNonce(ctx context.Context, data []byte, difficulty uint8) (procCnt uint32, _ <-chan []byte, _ <-chan Result) {
+func FindNonceUsingCPU(ctx context.Context, data []byte, difficulty uint8) (procCnt uint32, _ <-chan []byte, _ <-chan Result) {
 	procCnt = uint32(runtime.GOMAXPROCS(0))
 
 	candidateStream := make(chan []byte)
