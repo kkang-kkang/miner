@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "./LoadWasm.css";
 import { CallbackEvent } from "./event";
+import { createBlock, createTx } from "./event/dispatchers";
 
 function loadWasm(): Promise<void> {
   return new Promise<void>((resolve) => {
@@ -29,7 +30,20 @@ export const LoadWasm: React.FC<React.PropsWithChildren<{}>> = (props) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    loadWasm().then(() => setIsLoading(false));
+    loadWasm()
+      .then(() => setIsLoading(false))
+      .then(async () => {
+        const tx = await createTx({
+          amount: 0,
+          dstAddress: "ffffff",
+          srcAddress: "ffffff",
+          privateKey:
+            "17c9cfe25b1f2262e8ec2d8b65f502ef946d5ba4bc12bbd622755340bd9b3638",
+        });
+        await createBlock({
+          transactionHashes: [tx.hash],
+        });
+      });
   }, []);
 
   if (isLoading) {

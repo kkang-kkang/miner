@@ -12,8 +12,6 @@ export function createBlock(input: BlockCandidate): Promise<Block> {
 
               _resolve();
               resolve(event.data.data as Block);
-            } else if (event.data.type === MessageTypes.BLOCK_CANDIDATE) {
-              console.log('candidate: ', event.data.data);
             }
           };
           worker.addEventListener("message", handleEvent);

@@ -35,11 +35,6 @@ async function initWasmWorker() {
     }
   };
 
-  addEventListener(MessageTypes.BLOCK_CANDIDATE, (event: Event) => {
-    const msgEvent = event as MessageEvent<string>;
-    postMessage(new Message(MessageTypes.BLOCK_CANDIDATE, msgEvent.data));
-  });
-
   await initGPU();
 
   postMessage({});

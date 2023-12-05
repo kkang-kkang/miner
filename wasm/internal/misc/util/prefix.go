@@ -14,7 +14,7 @@ func CheckPrefix(hash []byte, difficulty uint8) bool {
 			diff = byteSize
 		}
 
-		mask = 1<<(byteSize-diff) - 1
+		mask = (1 << (byteSize - diff)) - 1
 		if mask|b != mask {
 			return false
 		}
