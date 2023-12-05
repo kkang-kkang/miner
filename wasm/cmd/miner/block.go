@@ -39,7 +39,7 @@ func createBlock() any {
 			// TODO: change this or whatever.
 			prevHash := []byte("ffffffffffff")
 			minerAddr := []byte("ffffffffffff")
-			const difficulty = 6
+			const difficulty = 8
 
 			block, err := block.New(minerAddr, txs, prevHash, difficulty)
 			if err != nil {
@@ -51,16 +51,17 @@ func createBlock() any {
 				return reject.Invoke(fmt.Sprintf("failed to make hash input: %v", err))
 			}
 
-			_, candidateStream, result := processor.FindNonceUsingCPU(ctx, in, difficulty)
-			for block.Header.CurHash == nil {
-				select {
-				case candidate := <-candidateStream:
-					go dispatchCandidateEvent(candidate)
-				case r := <-result:
-					block.Header.CurHash = r.Hash
-					block.Header.Nonce = r.Nonce
-				}
+			result := processor.FindNonceUsingGPU(ctx, in, difficulty)
+			nonce := <-result
+
+			block.Header.Nonce = uint32(nonce)
+			hash, err := block.Header.MakeHash()
+			if err != nil {
+				return reject.Invoke(fmt.Sprintf("failed to make hash: %v", err))
 			}
+
+			block.Header.CurHash = hash
+
 			if err := saveBlockToStorage(ctx, block); err != nil {
 				return reject.Invoke(err.Error())
 			}
@@ -195,11 +196,4 @@ func deleteTxInputs(ctx context.Context, block *block.Block) error {
 	}
 
 	return nil
-}
-
-func dispatchCandidateEvent(candidate hash.Hash) {
-	event := js.Global().Get("MessageEvent").
-		New("blockCandidate", map[string]interface{}{"data": util.BytesToStr(candidate.ToHex())})
-
-	js.Global().Call("dispatchEvent", event)
 }
