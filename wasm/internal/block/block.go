@@ -24,7 +24,7 @@ type Header struct {
 
 	DataHash   hash.Hash `json:"dataHash"`
 	Difficulty uint8     `json:"difficulty"`
-	Nonce      uint64    `json:"nonce"`
+	Nonce      uint32    `json:"nonce"`
 
 	Timestamp time.Time `json:"timestamp"`
 }
