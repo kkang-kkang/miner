@@ -9,7 +9,7 @@ import (
 	"miner/internal/misc/util"
 )
 
-const batchSize = 5000
+const cpuBatchSize = 5000
 
 type Result struct {
 	Hash  []byte
@@ -34,7 +34,7 @@ func FindNonceUsingCPU(ctx context.Context, data []byte, difficulty uint8) (proc
 		var nonce uint64
 		for i := uint32(0); i < procCnt; i++ {
 			go makeRunner(ctx, data, nonce, difficulty, cancel, candidateStream, result, finished)
-			nonce += batchSize
+			nonce += cpuBatchSize
 		}
 
 		for {
@@ -44,7 +44,7 @@ func FindNonceUsingCPU(ctx context.Context, data []byte, difficulty uint8) (proc
 				return
 			case <-finished:
 				go makeRunner(ctx, data, nonce, difficulty, cancel, candidateStream, result, finished)
-				nonce += batchSize
+				nonce += cpuBatchSize
 			}
 		}
 	}()
@@ -90,7 +90,7 @@ func makeRunner(ctx context.Context, data []byte, nonce uint64, diff uint8, canc
 }
 
 func findUsingCPU(data []byte, nonce uint64, difficulty uint8, done <-chan struct{}) (_ <-chan []byte, _ <-chan Result) {
-	limit := nonce + batchSize
+	limit := nonce + cpuBatchSize
 
 	candidateStream := make(chan []byte)
 	result := make(chan Result)
