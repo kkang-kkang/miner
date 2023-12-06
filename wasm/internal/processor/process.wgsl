@@ -4,11 +4,13 @@
 @group(0) @binding(3) var<storage, read> start : u32;
 @group(0) @binding(4) var<storage, read> prefixLen : u32;
 
+const CORE_BATCH_SIZE = 100;
+
 @compute @workgroup_size(8, 8)
 fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
   if (result != 0) { return; }
 
-  var nonce : u32 = start + global_id.x + (global_id.y * 8);
+  var nonce : u32 = start + (global_id.x + (global_id.y * 8)) * CORE_BATCH_SIZE;
   
   var inputCopy : array<u32, 57>;
   for (var i : u32 = 0; i < u32(arrayLength(&inputData)); i++) {
@@ -17,14 +19,20 @@ fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
 
   var last : u32 = arrayLength(&inputData);
 
-  inputCopy[last] = nonce & 0xFF;
-  inputCopy[last+1] = (nonce >> 8) & 0xFF;
-  inputCopy[last+2] = (nonce >> 16) & 0xFF;
-  inputCopy[last+3] = (nonce >> 24) & 0xFF;
+  for (var i = 0; i < CORE_BATCH_SIZE; i++) {
+    if (result != 0) { break; }
 
-  var buf: array<u32, SHA256_BLOCK_SIZE> = sha256(inputCopy);
-  if (result == 0 && checkPrefix(buf)) {
-    result = nonce;
+    inputCopy[last] = nonce & 0xFF;
+    inputCopy[last+1] = (nonce >> 8) & 0xFF;
+    inputCopy[last+2] = (nonce >> 16) & 0xFF;
+    inputCopy[last+3] = (nonce >> 24) & 0xFF;
+
+    var buf: array<u32, SHA256_BLOCK_SIZE> = sha256(inputCopy);
+    if (result == 0 && checkPrefix(buf)) {
+      result = nonce;
+    }
+
+    nonce++;
   }
 }
 

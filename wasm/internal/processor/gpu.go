@@ -9,7 +9,13 @@ import (
 	"github.com/mokiat/wasmgpu"
 )
 
-const gpuBatchSize = 8 * 8
+const (
+	x = 8
+	y = 8
+
+	cntPerCore   = 100
+	gpuBatchSize = x * y * cntPerCore
+)
 
 //go:embed process.wgsl
 var code string
