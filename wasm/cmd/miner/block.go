@@ -47,21 +47,13 @@ func createBlock() any {
 				return reject.Invoke(fmt.Sprintf("failed to create block: %v", err))
 			}
 
-			in, err := block.Header.MakeHashInput()
-			if err != nil {
-				return reject.Invoke(fmt.Sprintf("failed to make hash input: %v", err))
-			}
+			in := block.Header.MakeHashInput()
 
 			result := processor.FindNonceUsingGPU(ctx, in, difficulty)
 			nonce := <-result
 
 			block.Header.Nonce = nonce
-			hash, err := block.Header.MakeHash()
-			if err != nil {
-				return reject.Invoke(fmt.Sprintf("failed to make hash: %v", err))
-			}
-
-			block.Header.CurHash = hash
+			block.Header.CurHash = block.Header.MakeHash()
 
 			if err := saveBlockToStorage(ctx, block); err != nil {
 				return reject.Invoke(err.Error())
@@ -105,11 +97,7 @@ func insertBroadcastedBlock() any {
 				return reject.Invoke("block prefix is not valid")
 			}
 
-			hash, err := block.Header.MakeHash()
-			if err != nil {
-				return reject.Invoke(err.Error())
-			}
-
+			hash := block.Header.MakeHash()
 			if !bytes.Equal(block.Header.CurHash, hash) {
 				return reject.Invoke("hash is not valid")
 			}

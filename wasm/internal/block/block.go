@@ -88,45 +88,24 @@ func New(minerAddr []byte, txs []*tx.Transaction, prevHash []byte, difficulty ui
 	return block, nil
 }
 
-func (h *Header) MakeHash() ([]byte, error) {
+func (h *Header) MakeHash() []byte {
 	hash := sha256.New()
 
-	bytes, err := h.MakeHashInput()
-	if err != nil {
-		return nil, err
-	}
+	hash.Write(h.MakeHashInput())
+	binary.Write(hash, binary.LittleEndian, h.Nonce)
 
-	if _, err := hash.Write(bytes); err != nil {
-		return nil, errors.Wrap(err, "failed to write input")
-	}
-
-	if err := binary.Write(hash, binary.LittleEndian, h.Nonce); err != nil {
-		return nil, errors.Wrap(err, "failed to write hash")
-	}
-
-	return hash.Sum(nil), nil
+	return hash.Sum(nil)
 }
 
-func (h *Header) MakeHashInput() ([]byte, error) {
+func (h *Header) MakeHashInput() []byte {
 	buf := bytes.NewBuffer(nil)
 
-	if _, err := buf.Write(h.PrevHash); err != nil {
-		return nil, errors.Wrap(err, "failed to write prevHash")
-	}
+	buf.Write(h.PrevHash)
+	buf.Write(h.DataHash)
+	binary.Write(buf, binary.LittleEndian, h.Timestamp.UnixNano())
+	binary.Write(buf, binary.LittleEndian, h.Difficulty)
 
-	if _, err := buf.Write(h.DataHash); err != nil {
-		return nil, errors.Wrap(err, "failed to write dataHash")
-	}
-
-	if err := binary.Write(buf, binary.LittleEndian, h.Timestamp.UnixNano()); err != nil {
-		return nil, errors.Wrap(err, "failed to write timestamp")
-	}
-
-	if err := binary.Write(buf, binary.LittleEndian, h.Difficulty); err != nil {
-		return nil, errors.Wrap(err, "failed to write difficulty")
-	}
-
-	return buf.Bytes(), nil
+	return buf.Bytes()
 }
 
 // CreateMerkleTree creates merkle tree from block's transactions.

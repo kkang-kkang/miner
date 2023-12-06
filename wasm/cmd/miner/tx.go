@@ -17,7 +17,6 @@ import (
 	"miner/internal/tx"
 )
 
-// TODO: get explicit input from js. it could be JSON.stringified value.
 func createNewTx() any {
 	return js.FuncOf(func(this js.Value, args []js.Value) any {
 		return promise.New(promise.NewHandler(func(resolve, reject js.Value) any {

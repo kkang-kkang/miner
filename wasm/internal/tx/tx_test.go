@@ -29,8 +29,7 @@ func TestNewTx(t *testing.T) {
 		assert.Len(t, tx.Inputs, 1)
 
 		in := tx.Inputs[0]
-		data, err := in.GetDataBytes()
-		require.NoError(t, err)
+		data := in.GetDataBytes()
 
 		// signature is valid.
 		valid := ecdsa.VerifyASN1(&privKey.PublicKey, data, in.Signature)

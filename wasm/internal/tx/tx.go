@@ -25,18 +25,13 @@ type TxInput struct {
 	Signature hash.Hash `json:"sig"`
 }
 
-func (in *TxInput) GetDataBytes() ([]byte, error) {
+func (in *TxInput) GetDataBytes() []byte {
 	buf := bytes.NewBuffer(nil)
 
-	if _, err := buf.Write(in.TxHash); err != nil {
-		return nil, errors.Wrap(err, "failed to write txHash")
-	}
+	buf.Write(in.TxHash)
+	binary.Write(buf, binary.LittleEndian, in.OutIdx)
 
-	if err := binary.Write(buf, binary.LittleEndian, in.OutIdx); err != nil {
-		return nil, errors.Wrap(err, "failed to write outIdx")
-	}
-
-	return buf.Bytes(), nil
+	return buf.Bytes()
 }
 
 // TxOutput is result of the transaction.
@@ -72,11 +67,7 @@ func New(uTxOuts []*UTxOutput, amount uint64, privKey *ecdsa.PrivateKey, dstAddr
 			OutIdx: out.OutIdx,
 		}
 
-		b, err := input.GetDataBytes()
-		if err != nil {
-			return nil, err
-		}
-
+		b := input.GetDataBytes()
 		signature, err := ecdsa.SignASN1(rand.Reader, privKey, b)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to sign")
@@ -121,10 +112,7 @@ func New(uTxOuts []*UTxOutput, amount uint64, privKey *ecdsa.PrivateKey, dstAddr
 
 func (tx *Transaction) ValidateHash() bool {
 	hash, err := tx.MakeHash()
-	if err != nil {
-		return false
-	}
-	return bytes.Equal(tx.Hash, hash)
+	return err == nil && bytes.Equal(tx.Hash, hash)
 }
 
 func (tx *Transaction) MakeHash() ([]byte, error) {
@@ -136,9 +124,7 @@ func (tx *Transaction) MakeHash() ([]byte, error) {
 		return nil, errors.Wrap(err, "failed to encode tx inputs")
 	}
 
-	if _, err := hash.Write(buf.Bytes()); err != nil {
-		return nil, errors.Wrap(err, "failed to write hash")
-	}
+	hash.Write(buf.Bytes())
 
 	buf.Reset()
 
@@ -146,9 +132,7 @@ func (tx *Transaction) MakeHash() ([]byte, error) {
 		return nil, errors.Wrap(err, "failed to encode tx outputs")
 	}
 
-	if _, err := hash.Write(buf.Bytes()); err != nil {
-		return nil, errors.Wrap(err, "failed to write hash")
-	}
+	hash.Write(buf.Bytes())
 
 	return hash.Sum(nil), nil
 }
