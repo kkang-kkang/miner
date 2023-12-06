@@ -136,3 +136,27 @@ func DeleteTxs(ctx context.Context, txHashes [][]byte) error {
 		return nil
 	}, ObjStoreTransaction)
 }
+
+// UpdateTxs deletes transactions.
+func UpdateTxs(ctx context.Context, txs []*tx.Transaction) error {
+	return withTx(idb.TransactionReadWrite, func(tranx *idb.Transaction) error {
+		objStore, err := tranx.ObjectStore(ObjStoreTransaction)
+		if err != nil {
+			return errors.Wrap(err, "failed to get object store")
+		}
+
+		for _, tx := range txs {
+			b, err := json.Marshal(tx)
+			if err != nil {
+				return errors.Wrap(err, "failed to marshal transaction")
+			}
+
+			objStore.PutKey(
+				js.ValueOf(util.BytesToStr(tx.Hash.ToHex())),
+				util.ToJSObject(b),
+			)
+		}
+
+		return nil
+	}, ObjStoreTransaction)
+}

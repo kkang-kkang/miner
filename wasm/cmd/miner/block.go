@@ -15,6 +15,7 @@ import (
 	"miner/internal/misc/util"
 	"miner/internal/processor"
 	"miner/internal/storage"
+	"miner/internal/tx"
 )
 
 func createBlock() any {
@@ -54,7 +55,7 @@ func createBlock() any {
 			result := processor.FindNonceUsingGPU(ctx, in, difficulty)
 			nonce := <-result
 
-			block.Header.Nonce = uint32(nonce)
+			block.Header.Nonce = nonce
 			hash, err := block.Header.MakeHash()
 			if err != nil {
 				return reject.Invoke(fmt.Sprintf("failed to make hash: %v", err))
@@ -156,6 +157,7 @@ func saveBlockToStorage(ctx context.Context, block *block.Block) error {
 		return errors.Wrap(err, "failed to insert block header")
 	}
 
+	// copy block body so we can use original one later.
 	newBlockBody := *block.Body
 	newBlockBody.CoinbaseTx = nil
 	newBlockBody.Txs = nil
@@ -164,8 +166,8 @@ func saveBlockToStorage(ctx context.Context, block *block.Block) error {
 		return errors.Wrap(err, "failed to insert block body")
 	}
 
-	if err := deleteTxInputs(ctx, block); err != nil {
-		return errors.Wrap(err, "failed to delete tx inputs")
+	if err := deleteUsedTxOutputs(ctx, block); err != nil {
+		return errors.Wrap(err, "failed to delete used tx outputs")
 	}
 
 	if err := storage.DeleteTxsFromMempool(ctx, block.Body.TxHashes); err != nil {
@@ -179,21 +181,46 @@ func saveBlockToStorage(ctx context.Context, block *block.Block) error {
 	return nil
 }
 
-func deleteTxInputs(ctx context.Context, block *block.Block) error {
-	txHashes := make([][]byte, 0)
+func deleteUsedTxOutputs(ctx context.Context, block *block.Block) error {
+	updatable := make([]*tx.Transaction, 0, len(block.Body.Txs))
+	deletable := make([][]byte, 0, len(block.Body.Txs))
 
 	for _, tx := range block.Body.Txs {
 		for _, in := range tx.Inputs {
-			txHashes = append(txHashes, in.TxHash.ToHex())
+			hash := in.TxHash.ToHex()
+
+			targetTx, err := storage.FindTx(ctx, hash)
+			if err != nil {
+				return errors.Wrap(err, "failed to find transaction to classify")
+			}
+
+			targetTx.Outputs[in.OutIdx].Addr = []byte{0x00}
+
+			// check if all the tx outputs are used.
+			if empty := checkTxEmpty(targetTx); empty {
+				deletable = append(deletable, hash)
+				continue
+			}
+			updatable = append(updatable, targetTx)
 		}
 	}
 
-	// what if index 0 is used and 1 is not?
-	// let's just keep it as todo for now.
+	if err := storage.UpdateTxs(ctx, updatable); err != nil {
+		return errors.Wrap(err, "failed to update txs")
+	}
 
-	if err := storage.DeleteTxs(ctx, txHashes); err != nil {
+	if err := storage.DeleteTxs(ctx, deletable); err != nil {
 		return errors.Wrap(err, "failed to delete txs")
 	}
 
 	return nil
+}
+
+func checkTxEmpty(tx *tx.Transaction) bool {
+	for _, out := range tx.Outputs {
+		if !bytes.Equal([]byte{0x00}, out.Addr) {
+			return false
+		}
+	}
+	return true
 }
