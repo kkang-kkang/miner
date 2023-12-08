@@ -12,7 +12,6 @@ import (
 	"github.com/pkg/errors"
 
 	"miner/internal/hash"
-	"miner/internal/key"
 )
 
 var COINBASE hash.Hash = []byte("COINBASE")
@@ -54,7 +53,7 @@ type Transaction struct {
 	Outputs []*TxOutput `json:"outputs"`
 }
 
-func New(uTxOuts []*UTxOutput, amount uint64, privKey *ecdsa.PrivateKey, dstAddr []byte) (*Transaction, error) {
+func New(uTxOuts []*UTxOutput, amount uint64, privKey *ecdsa.PrivateKey, srcAddr []byte, dstAddr []byte) (*Transaction, error) {
 	tx := &Transaction{
 		Inputs:  make([]*TxInput, 0, len(uTxOuts)),
 		Outputs: make([]*TxOutput, 0),
@@ -87,13 +86,8 @@ func New(uTxOuts []*UTxOutput, amount uint64, privKey *ecdsa.PrivateKey, dstAddr
 	tx.Outputs = append(tx.Outputs, dstOut)
 
 	if diff := sum - amount; diff > 0 {
-		addr, err := key.MarshalECDSAPublicKey(&privKey.PublicKey)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to get src address")
-		}
-
 		srcOut := &TxOutput{
-			Addr:   addr,
+			Addr:   srcAddr,
 			Amount: diff,
 		}
 

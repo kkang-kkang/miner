@@ -16,16 +16,7 @@ func ParseECDSAPublicKey(b []byte) (*ecdsa.PublicKey, error) {
 		return nil, err
 	}
 
-	key, err := x509.ParsePKIXPublicKey(b)
-	if err != nil {
-		return nil, errors.Wrap(err, "cannot create ecdsa public key from bytes")
-	}
-
-	ecdsaKey, ok := key.(*ecdsa.PublicKey)
-	if !ok {
-		return nil, errors.New("key is not type of ecdsa.PublicKey")
-	}
-	return ecdsaKey, nil
+	return parsePublic(b)
 }
 
 func ParseECDSAPrivateKey(b []byte) (*ecdsa.PrivateKey, error) {
@@ -39,8 +30,28 @@ func ParseECDSAPrivateKey(b []byte) (*ecdsa.PrivateKey, error) {
 		return nil, errors.Wrap(err, "cannot create ecdsa private key from bytes")
 	}
 
-	privKey := &ecdsa.PrivateKey{
-		D: new(big.Int).SetBytes(key.Bytes()),
+	pubKey, err := parsePublic(key.PublicKey().Bytes())
+	if err != nil {
+		return nil, err
 	}
+
+	privKey := &ecdsa.PrivateKey{
+		PublicKey: *pubKey,
+		D:         new(big.Int).SetBytes(key.Bytes()),
+	}
+
 	return privKey, nil
+}
+
+func parsePublic(b []byte) (*ecdsa.PublicKey, error) {
+	key, err := x509.ParsePKIXPublicKey(b)
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot create ecdsa public key from bytes")
+	}
+
+	ecdsaKey, ok := key.(*ecdsa.PublicKey)
+	if !ok {
+		return nil, errors.New("key is not type of ecdsa.PublicKey")
+	}
+	return ecdsaKey, nil
 }

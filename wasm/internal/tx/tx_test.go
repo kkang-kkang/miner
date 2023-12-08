@@ -15,15 +15,20 @@ func TestNewTx(t *testing.T) {
 	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	require.NoError(t, err)
 
+	var (
+		got   uint64 = 40
+		spent uint64 = 30
+	)
+
 	uTxOuts := []*tx.UTxOutput{
 		{
 			TxHash: []byte("asdfasdfasdfsadfasdf"),
 			OutIdx: 0,
-			Amount: 40,
+			Amount: got,
 		},
 	}
 
-	tx, err := tx.New(uTxOuts, 30, privKey, []byte("hithere"))
+	tx, err := tx.New(uTxOuts, spent, privKey, []byte("helloThere"), []byte("hithere"))
 	if assert.NoError(t, err) {
 		// there is one input.
 		assert.Len(t, tx.Inputs, 1)
@@ -46,6 +51,6 @@ func TestNewTx(t *testing.T) {
 		assert.Equal(t, uint64(30), dstOut.Amount)
 
 		// srcOut is ok.
-		assert.Equal(t, srcOut.Amount, uint64(40-30))
+		assert.Equal(t, srcOut.Amount, uint64(got-spent))
 	}
 }
