@@ -9,12 +9,9 @@ import (
 	"github.com/cbergoon/merkletree"
 	"github.com/pkg/errors"
 
+	"miner/internal/blockchain"
 	"miner/internal/hash"
 	"miner/internal/tx"
-)
-
-const (
-	BlockMiningPrize = 10
 )
 
 // Header is header part of the block.
@@ -52,7 +49,7 @@ func New(minerAddr []byte, txs []*tx.Transaction, prevHash []byte, difficulty ui
 		}},
 		Outputs: []*tx.TxOutput{{
 			Addr:   minerAddr,
-			Amount: BlockMiningPrize * uint64(len(txs)), // TODO: change this to actual algorithm.
+			Amount: blockchain.MiningPrize * uint64(len(txs)), // TODO: change this to actual algorithm.
 		}},
 	}
 

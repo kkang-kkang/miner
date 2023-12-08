@@ -38,7 +38,7 @@ func createNewTx() any {
 
 			ctx := context.Background()
 
-			uTxOuts, got, err := storage.FindUTxOutputs(ctx, publicKey.Bytes(), amount)
+			uTxOuts, got, err := storage.FindUTxOutputs(ctx, publicKey.Bytes())
 			if err != nil {
 				return reject.Invoke(fmt.Sprintf("failed to find uTxOutputs: %v", err))
 			}

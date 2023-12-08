@@ -78,21 +78,10 @@ func New(uTxOuts []*UTxOutput, amount uint64, privKey *ecdsa.PrivateKey, srcAddr
 		sum += out.Amount
 	}
 
-	dstOut := &TxOutput{
-		Addr:   dstAddr,
-		Amount: amount,
-	}
+	dstOut := &TxOutput{Addr: dstAddr, Amount: amount}
+	srcOut := &TxOutput{Addr: srcAddr, Amount: sum - amount}
 
-	tx.Outputs = append(tx.Outputs, dstOut)
-
-	if diff := sum - amount; diff > 0 {
-		srcOut := &TxOutput{
-			Addr:   srcAddr,
-			Amount: diff,
-		}
-
-		tx.Outputs = append(tx.Outputs, srcOut)
-	}
+	tx.Outputs = append(tx.Outputs, dstOut, srcOut)
 
 	hash, err := tx.MakeHash()
 	if err != nil {
