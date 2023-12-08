@@ -1,7 +1,6 @@
 declare global {
   export type TxCandidate = {
     readonly amount: number;
-    readonly srcAddress: string;
     readonly dstAddress: string;
     readonly privateKey: string;
   };
@@ -37,8 +36,10 @@ declare global {
       timestamp: string;
     };
     body: {
-      coinbaseTx: Transaction;
-      txs: Transaction[];
+      coinbaseTx: Transaction | undefined;
+      txs: Transaction[] | undefined;
+      coinbaseTxHash: string;
+      txHashes: string;
     };
   };
 
@@ -48,6 +49,7 @@ declare global {
     createBlock: (input: BlockCandidate) => Promise<Block>;
     insertBroadcastedTx: (candidate: Transaction) => Promise<void>;
     insertBroadcastedBlock: (candidate: Block) => Promise<void>;
+    createGenesis: () => Promise<void>;
 
     getDevice: () => any;
   }

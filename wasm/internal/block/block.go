@@ -43,7 +43,7 @@ type Block struct {
 }
 
 // New creates new block from given arguments.
-// You still have to configure [nonce, hash, difficulty].
+// You still have to configure [nonce, hash].
 func New(minerAddr []byte, txs []*tx.Transaction, prevHash []byte, difficulty uint8) (*Block, error) {
 	coinBaseTx := &tx.Transaction{
 		Inputs: []*tx.TxInput{{

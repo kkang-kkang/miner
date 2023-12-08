@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"syscall/js"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -18,11 +19,15 @@ import (
 	"miner/internal/tx"
 )
 
+const difficulty = 22
+
+var minerAddr = []byte("ffffffffffff")
+var prevHash = []byte("ffffffffffff")
+
 func createBlock() any {
 	return js.FuncOf(func(this js.Value, args []js.Value) any {
 		return promise.New(promise.NewHandler(func(resolve, reject js.Value) any {
-			candidate := args[0]
-			hashStrings := candidate.Get("transactionHashes")
+			hashStrings := args[0].Get("transactionHashes")
 
 			txHashes := make([]hash.Hash, hashStrings.Length())
 			for i := 0; i < len(txHashes); i++ {
@@ -36,11 +41,6 @@ func createBlock() any {
 			if err != nil {
 				return reject.Invoke(fmt.Sprintf("failed to find txs: %v", err))
 			}
-
-			// TODO: change this or whatever.
-			prevHash := []byte("ffffffffffff")
-			minerAddr := []byte("ffffffffffff")
-			const difficulty = 8
 
 			block, err := block.New(minerAddr, txs, prevHash, difficulty)
 			if err != nil {
@@ -64,6 +64,31 @@ func createBlock() any {
 
 			b, _ := json.Marshal(block)
 			return resolve.Invoke(util.ToJSObject(b))
+		}))
+	})
+}
+
+func createGenesis() any {
+	return js.FuncOf(func(this js.Value, args []js.Value) any {
+		return promise.New(promise.NewHandler(func(resolve, reject js.Value) any {
+			ctx := context.Background()
+
+			b := &block.Block{
+				Header: &block.Header{
+					CurHash:    []byte{0x00},
+					PrevHash:   []byte{0x00},
+					DataHash:   []byte{0x00},
+					Difficulty: 0,
+					Nonce:      0,
+					Timestamp:  time.Now(),
+				},
+			}
+
+			if err := storage.InsertBlockHeader(ctx, b.Header); err != nil {
+				return errors.Wrap(err, "failed to insert block header")
+			}
+
+			return resolve.Invoke()
 		}))
 	})
 }

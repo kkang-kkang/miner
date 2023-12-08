@@ -36,7 +36,6 @@ export const LoadWasm: React.FC<React.PropsWithChildren<{}>> = (props) => {
         const tx = await createTx({
           amount: 0,
           dstAddress: "ffffff",
-          srcAddress: "ffffff",
           privateKey:
             "17c9cfe25b1f2262e8ec2d8b65f502ef946d5ba4bc12bbd622755340bd9b3638",
         });

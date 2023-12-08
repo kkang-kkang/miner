@@ -25,11 +25,6 @@ func createNewTx() any {
 			amount := uint64(candidate.Get("amount").Int())
 			privKeyBytes := util.StrToBytes(candidate.Get("privateKey").String())
 
-			srcAddr, err := util.DecodeHex(util.StrToBytes(candidate.Get("srcAddress").String()))
-			if err != nil {
-				return reject.Invoke(fmt.Sprintf("failed to decode hex: %v", err))
-			}
-
 			dstAddr, err := util.DecodeHex(util.StrToBytes(candidate.Get("dstAddress").String()))
 			if err != nil {
 				return reject.Invoke(fmt.Sprintf("failed to decode hex: %v", err))
@@ -39,10 +34,11 @@ func createNewTx() any {
 			if err != nil {
 				return reject.Invoke(fmt.Sprintf("failed to parse private key: %v", err))
 			}
+			publicKey, _ := privKey.PublicKey.ECDH()
 
 			ctx := context.Background()
 
-			uTxOuts, got, err := storage.FindUTxOutputs(ctx, srcAddr, amount)
+			uTxOuts, got, err := storage.FindUTxOutputs(ctx, publicKey.Bytes(), amount)
 			if err != nil {
 				return reject.Invoke(fmt.Sprintf("failed to find uTxOutputs: %v", err))
 			}
@@ -51,7 +47,7 @@ func createNewTx() any {
 				return reject.Invoke(fmt.Sprintf("not enough coins. got: %d, need: %d", got, amount))
 			}
 
-			tx, err := tx.New(uTxOuts, amount, privKey, dstAddr)
+			tx, err := tx.New(uTxOuts, amount, privKey, publicKey.Bytes(), dstAddr)
 			if err != nil {
 				return reject.Invoke(fmt.Sprintf("failed to create tx: %v", err))
 			}
