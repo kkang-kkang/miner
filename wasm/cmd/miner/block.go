@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 
 	"miner/internal/block"
+	"miner/internal/blockchain"
 	"miner/internal/hash"
 	"miner/internal/misc/promise"
 	"miner/internal/misc/util"
@@ -18,11 +19,6 @@ import (
 	"miner/internal/storage"
 	"miner/internal/tx"
 )
-
-const difficulty = 22
-
-var minerAddr = []byte("ffffffffffff")
-var prevHash = []byte("ffffffffffff")
 
 func createBlock() any {
 	return js.FuncOf(func(this js.Value, args []js.Value) any {
@@ -42,14 +38,17 @@ func createBlock() any {
 				return reject.Invoke(fmt.Sprintf("failed to find txs: %v", err))
 			}
 
-			block, err := block.New(minerAddr, txs, prevHash, difficulty)
+			block, err := block.New(
+				blockchain.MinerAddr, txs,
+				blockchain.HeadHash, blockchain.Difficulty,
+			)
 			if err != nil {
 				return reject.Invoke(fmt.Sprintf("failed to create block: %v", err))
 			}
 
 			in := block.Header.MakeHashInput()
 
-			result := processor.FindNonceUsingGPU(ctx, in, difficulty)
+			result := processor.FindNonceUsingGPU(ctx, in, blockchain.Difficulty)
 			nonce := <-result
 
 			block.Header.Nonce = nonce
@@ -75,9 +74,9 @@ func createGenesis() any {
 
 			b := &block.Block{
 				Header: &block.Header{
-					CurHash:    []byte{0x00},
-					PrevHash:   []byte{0x00},
-					DataHash:   []byte{0x00},
+					CurHash:    blockchain.GenesisHash(),
+					PrevHash:   blockchain.GenesisHash(),
+					DataHash:   blockchain.GenesisHash(),
 					Difficulty: 0,
 					Nonce:      0,
 					Timestamp:  time.Now(),
@@ -105,15 +104,11 @@ func insertBroadcastedBlock() any {
 
 			ctx := context.Background()
 
-			// TODO: should change this to real value.
-			var blockHeadHash = []byte("ffffffffffff")
-			var difficulty uint8 = 6
-
-			if !bytes.Equal(block.Header.PrevHash, blockHeadHash) {
+			if !bytes.Equal(block.Header.PrevHash, blockchain.HeadHash) {
 				return reject.Invoke("block is not up-to-date")
 			}
 
-			if block.Header.Difficulty != difficulty {
+			if block.Header.Difficulty != blockchain.Difficulty {
 				return reject.Invoke("block difficulty does not match")
 			}
 
