@@ -3,7 +3,6 @@ package storage
 import (
 	"context"
 	"errors"
-	"sync"
 
 	"github.com/hack-pad/go-indexeddb/idb"
 	errs "github.com/pkg/errors"
@@ -17,18 +16,8 @@ const (
 )
 
 var db *idb.Database
-var once sync.Once
 
-func getDB() *idb.Database {
-	once.Do(func() {
-		if err := initDB(context.Background()); err != nil {
-			panic(err)
-		}
-	})
-	return db
-}
-
-func initDB(ctx context.Context) error {
+func InitDB(ctx context.Context) error {
 	openRequest, err := idb.Global().Open(ctx, "blockchain", 0, func(db *idb.Database, oldVersion, newVersion uint) error {
 		_, err := db.CreateObjectStore(ObjStoreTransaction, idb.ObjectStoreOptions{})
 		if err != nil {
@@ -65,7 +54,7 @@ func initDB(ctx context.Context) error {
 }
 
 func withTx(mode idb.TransactionMode, f func(tranx *idb.Transaction) error, objStoreName string, objStoreNames ...string) error {
-	tranx, err := getDB().Transaction(mode, objStoreName, objStoreNames...)
+	tranx, err := db.Transaction(mode, objStoreName, objStoreNames...)
 	if err != nil {
 		return errs.Wrap(err, "failed to start transaction")
 	}
