@@ -1,14 +1,25 @@
 export enum EventType {
   OFFER = "offer",
+  RECEIVE_OFFER = "receive-offer",
+
   ANSWER = "answer",
+  SEND_ANSWER = "send-answer",
+  RECEIVE_ANSWER = "receive-answer",
+
   ICE = "ice",
+  SEND_ICE = "send-ice",
+  RECEIVE_ICE = "receive-ice",
+
   BLOCK_CREATED = "block-created",
   TX_CREATED = "tx-created",
   NEW_TX = "new-tx",
+
   PEER_CONNECTED = "peer-conneced",
   PEER_DISCONNECTED = "peer-disconnected",
+
   SEND_BLOCKCHAIN = "send-blockchain",
   RECEIVE_BLOCKCHAIN = "receive-blockchain",
+
   CHAT = "chat",
 }
 

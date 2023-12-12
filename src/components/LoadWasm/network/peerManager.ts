@@ -33,6 +33,10 @@ export class PeerManager {
     private readonly networkListener: NetworkListener,
   ) {
     this.initialOffer = undefined;
+
+    this.networkListener.attachListener(EventType.RECEIVE_ICE, this.addIceCandidate);
+    this.networkListener.attachListener(EventType.RECEIVE_OFFER, this.acceptOffer);
+    this.networkListener.attachListener(EventType.RECEIVE_ANSWER, this.acceptAnswer);
   }
 
   public broadcastChat(msg: string) {
@@ -77,26 +81,6 @@ export class PeerManager {
     });
   }
 
-  public async transferBlockchain(channel: RTCDataChannel) {
-    this.networkListener.dispatch(EventType.SEND_BLOCKCHAIN, undefined);
-
-    const transfer = (objStore: ObjectStore) => {
-      return this.dbManager.iterateAll(objStore, (key: string, value: any) => {
-        const unit: CloneUnit = { kind: objStore, data: { key, value } };
-        channel.send(JSON.stringify(unit));
-      });
-    };
-
-    await Promise.all([
-      transfer(ObjectStore.BLOCK_BODIES),
-      transfer(ObjectStore.BLOCK_HEADERS),
-      transfer(ObjectStore.TRANSACTION),
-      transfer(ObjectStore.MEMPOOL),
-    ]);
-
-    channel.send("done");
-  }
-
   /**
    * this should be called right after the local peer is initialized
    */
@@ -124,12 +108,7 @@ export class PeerManager {
     });
   }
 
-  /**
-   *
-   * @param nickname incoming peer's nickname
-   * @param answer incoming peer's description
-   */
-  public async acceptAnswer(nickname: string, answer: RTCSessionDescription): Promise<void> {
+  public async acceptAnswer({ data: answer, nickname }: PeerEvent<RTCSessionDescription>) {
     const connection = new RTCPeerConnection({ iceServers });
 
     await connection.setLocalDescription(this.initialOffer);
@@ -153,16 +132,7 @@ export class PeerManager {
     this.networkListener.dispatch(EventType.PEER_CONNECTED, nickname);
   }
 
-  /**
-   *
-   * @param nickname incoming peer's nickname
-   * @param offer incoming peer's description
-   * @returns answer to send to incoming peer
-   */
-  public async acceptOffer(
-    nickname: string,
-    offer: RTCSessionDescription,
-  ): Promise<RTCSessionDescription> {
+  private async acceptOffer({ data: offer, nickname }: PeerEvent<RTCSessionDescription>) {
     const connection = new RTCPeerConnection({ iceServers });
 
     const answer = await connection.createAnswer();
@@ -193,22 +163,21 @@ export class PeerManager {
 
     this.networkListener.dispatch(EventType.PEER_CONNECTED, nickname);
 
-    return connection.localDescription!;
+    const msg: PeerEvent<RTCSessionDescription> = { data: connection.localDescription!, nickname };
+    this.networkListener.dispatch(EventType.SEND_ANSWER, msg);
   }
 
-  public addIceCandidate(nickname: string, _candidate: string) {
-    const candidate = new RTCIceCandidate({ candidate: _candidate });
-    const { connection } = this.peerStorage.get(nickname)!;
-
-    connection.addIceCandidate(candidate).then(() => {
-      this.peerStorage.get(nickname)!.ip = candidate.address;
+  private addIceCandidate(event: PeerEvent<RTCIceCandidate>) {
+    const peer = this.peerStorage.get(event.nickname)!;
+    peer.connection.addIceCandidate(event.data).then(() => {
+      peer.ip = event.data.address;
     });
   }
 
   private initPeerListener(nickname: string, conn: RTCPeerConnection) {
     conn.onicecandidate = (ice: RTCPeerConnectionIceEvent) => {
       const event: PeerEvent<RTCIceCandidate> = { data: ice.candidate!, nickname };
-      this.networkListener.dispatch(EventType.ICE, event);
+      this.networkListener.dispatch(EventType.SEND_ICE, event);
     };
 
     conn.onsignalingstatechange = () => {
@@ -285,5 +254,25 @@ export class PeerManager {
         });
       }
     };
+  }
+
+  private async transferBlockchain(channel: RTCDataChannel) {
+    this.networkListener.dispatch(EventType.SEND_BLOCKCHAIN, undefined);
+
+    const transfer = (objStore: ObjectStore) => {
+      return this.dbManager.iterateAll(objStore, (key: string, value: any) => {
+        const unit: CloneUnit = { kind: objStore, data: { key, value } };
+        channel.send(JSON.stringify(unit));
+      });
+    };
+
+    await Promise.all([
+      transfer(ObjectStore.BLOCK_BODIES),
+      transfer(ObjectStore.BLOCK_HEADERS),
+      transfer(ObjectStore.TRANSACTION),
+      transfer(ObjectStore.MEMPOOL),
+    ]);
+
+    channel.send("done");
   }
 }

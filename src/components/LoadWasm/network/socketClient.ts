@@ -40,17 +40,8 @@ export class SocketClient {
   }
 
   public sendOffer(offer: RTCSessionDescription) {
-    this.socket.emit(EventType.OFFER, offer.toJSON());
-  }
-
-  public sendAnswer(nickname: string, answer: RTCSessionDescription) {
-    const event: PeerEvent<string> = { nickname, data: answer.toJSON() };
-    this.socket.emit(EventType.ANSWER, event);
-  }
-
-  public sendIce(nickname: string, ice: RTCIceCandidate) {
-    const event: PeerEvent<string> = { nickname, data: ice.candidate };
-    this.socket.emit(EventType.ICE, event);
+    const event: PeerEvent<string> = { nickname: "", data: offer.sdp };
+    this.socket.emit(EventType.OFFER, event);
   }
 
   private registerListeners() {
@@ -60,7 +51,53 @@ export class SocketClient {
     this.socket.on(Request.LIST_BLOCK, this.handleListBlock);
     this.socket.on(Request.NEW_TX, this.handleNewTx);
 
+    this.socket.on(EventType.OFFER, this.handleOffer);
+    this.socket.on(EventType.ANSWER, this.handleAnswer);
+    this.socket.on(EventType.ICE, this.handleReceiveIce);
+
     this.networkListener.attachListener(EventType.TX_CREATED, this.handleTxCreated);
+    this.networkListener.attachListener(EventType.SEND_ICE, this.handleSendIce);
+    this.networkListener.attachListener(EventType.SEND_ANSWER, this.sendAnswer);
+  }
+
+  private sendAnswer(event: PeerEvent<RTCSessionDescription>) {
+    const msg: PeerEvent<string> = { nickname: event.nickname, data: event.data.sdp };
+    this.socket.emit(EventType.ANSWER, msg);
+  }
+
+  private handleSendIce(event: PeerEvent<RTCIceCandidate>) {
+    const msg: PeerEvent<string> = { nickname: event.nickname, data: event.data.candidate };
+    this.socket.emit(EventType.ICE, msg);
+  }
+
+  private handleOffer(event: PeerEvent<string>) {
+    const sessionDescription = new RTCSessionDescription({ type: "offer", sdp: event.data });
+
+    const msg: PeerEvent<RTCSessionDescription> = {
+      data: sessionDescription,
+      nickname: event.nickname,
+    };
+    this.networkListener.dispatch(EventType.OFFER, msg);
+  }
+
+  private handleAnswer(event: PeerEvent<string>) {
+    const sessionDescription = new RTCSessionDescription({ type: "answer", sdp: event.data });
+
+    const msg: PeerEvent<RTCSessionDescription> = {
+      data: sessionDescription,
+      nickname: event.nickname,
+    };
+    this.networkListener.dispatch(EventType.ANSWER, msg);
+  }
+
+  private handleReceiveIce(event: PeerEvent<string>) {
+    const candidate = new RTCIceCandidate({ candidate: event.data });
+
+    const msg: PeerEvent<RTCIceCandidate> = {
+      data: candidate,
+      nickname: event.nickname,
+    };
+    this.networkListener.dispatch(EventType.RECEIVE_ICE, msg);
   }
 
   private async handleFindBlock({ data: { hash }, id }: IDEvent<HashPayload>) {
