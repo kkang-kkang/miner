@@ -1,14 +1,7 @@
 import { Mutex } from "async-mutex";
-import { insertBroadcastedBlock, insertBroadcastedTx } from "../event/dispatchers";
-import { DBManager, ObjectStore } from "../misc";
-import { EventType, PeerEvent } from "./event";
-
-enum Channel {
-  BROADCAST_TX = "broadcast-tx",
-  BROADCAST_BLOCK = "broadcast-block",
-  OPEN_CHAT = "open-chat",
-  CLONE = "clone",
-}
+import { Channel, DBManager, ObjectStore, PeerStorage } from "../misc";
+import { ChatPayload, EventType, PeerEvent } from "./event";
+import { NetworkListener } from "./networkListener";
 
 const iceServers: RTCIceServer[] = [
   {
@@ -30,41 +23,27 @@ type CloneUnit = {
   };
 };
 
-type ChatPayload = {
-  nickname: string;
-  data: string;
-  timestamp: Date;
-};
-
-type Peer = {
-  nickname: string;
-  ip: string | null;
-  connection: RTCPeerConnection;
-  datachannels: Map<Channel, RTCDataChannel>;
-};
-
-export class PeerManager extends EventTarget {
-  private peers: Map<string, Peer>;
+export class PeerManager {
   private initialOffer: RTCSessionDescription | undefined;
-  private dbManager: DBManager;
-  private readonly mutex: Mutex;
 
-  constructor(mutex: Mutex) {
-    super();
-    this.peers = new Map<string, Peer>();
-    this.dbManager = new DBManager();
-    this.mutex = mutex;
+  constructor(
+    private readonly mutex: Mutex,
+    private readonly dbManager: DBManager,
+    private readonly peerStorage: PeerStorage,
+    private readonly networkListener: NetworkListener,
+  ) {
+    this.initialOffer = undefined;
   }
 
   public broadcastChat(msg: string) {
-    this.peers.forEach((peer) => {
+    this.peerStorage.iterate((peer) => {
       const channel = peer.datachannels.get(Channel.OPEN_CHAT)!;
       channel.send(msg);
     });
   }
 
   public sendChat(nickname: string, msg: string) {
-    const peer = this.peers.get(nickname);
+    const peer = this.peerStorage.get(nickname);
     if (peer === undefined) return;
 
     const channel = peer.datachannels.get(Channel.OPEN_CHAT)!;
@@ -72,13 +51,15 @@ export class PeerManager extends EventTarget {
   }
 
   public cloneBlockchain(): Promise<void> {
-    const peerArray = Array.from(this.peers.values());
-    const peer = peerArray[Math.floor(Math.random() * peerArray.length)];
+    const arr = this.peerStorage.all();
+    const peer = arr[Math.floor(Math.random() * arr.length)];
 
     const chan = peer.datachannels.get(Channel.CLONE)!;
     chan.send("request");
 
     return new Promise((resolve) => {
+      this.networkListener.dispatch(EventType.RECEIVE_BLOCKCHAIN, peer.nickname);
+
       chan.onmessage = async (event: MessageEvent<string>) => {
         if (event.data === "done") {
           chan.onmessage = this.handleClone(chan);
@@ -97,6 +78,8 @@ export class PeerManager extends EventTarget {
   }
 
   public async transferBlockchain(channel: RTCDataChannel) {
+    this.networkListener.dispatch(EventType.SEND_BLOCKCHAIN, undefined);
+
     const transfer = (objStore: ObjectStore) => {
       return this.dbManager.iterateAll(objStore, (key: string, value: any) => {
         const unit: CloneUnit = { kind: objStore, data: { key, value } };
@@ -127,7 +110,7 @@ export class PeerManager extends EventTarget {
 
   public broadcastTx(tx: Transaction) {
     const jsonTx = JSON.stringify(tx);
-    this.peers.forEach((peer) => {
+    this.peerStorage.iterate((peer) => {
       const chan = peer.datachannels.get(Channel.BROADCAST_TX)!;
       chan.send(jsonTx);
     });
@@ -135,7 +118,7 @@ export class PeerManager extends EventTarget {
 
   public broadcastBlock(block: Block) {
     const jsonBlock = JSON.stringify(block);
-    this.peers.forEach((peer) => {
+    this.peerStorage.iterate((peer) => {
       const chan = peer.datachannels.get(Channel.BROADCAST_BLOCK)!;
       chan.send(jsonBlock);
     });
@@ -160,12 +143,14 @@ export class PeerManager extends EventTarget {
 
     this.initPeerListener(nickname, connection);
 
-    this.peers.set(nickname, {
+    this.peerStorage.put({
       ip: null,
       nickname,
       connection,
       datachannels,
     });
+
+    this.networkListener.dispatch(EventType.PEER_CONNECTED, nickname);
   }
 
   /**
@@ -199,40 +184,37 @@ export class PeerManager extends EventTarget {
 
     this.initPeerListener(nickname, connection);
 
-    this.peers.set(nickname, {
+    this.peerStorage.put({
       ip: null,
       nickname,
       connection,
       datachannels,
     });
 
+    this.networkListener.dispatch(EventType.PEER_CONNECTED, nickname);
+
     return connection.localDescription!;
   }
 
   public addIceCandidate(nickname: string, _candidate: string) {
     const candidate = new RTCIceCandidate({ candidate: _candidate });
-    const { connection } = this.peers.get(nickname)!;
+    const { connection } = this.peerStorage.get(nickname)!;
 
     connection.addIceCandidate(candidate).then(() => {
-      this.peers.get(nickname)!.ip = candidate.address;
+      this.peerStorage.get(nickname)!.ip = candidate.address;
     });
   }
 
   private initPeerListener(nickname: string, conn: RTCPeerConnection) {
-    conn.onicecandidate = (event: RTCPeerConnectionIceEvent) => {
-      this.dispatchEvent(
-        new CustomEvent<PeerEvent<RTCIceCandidate>>(EventType.ICE, {
-          detail: {
-            nickname,
-            data: event.candidate!,
-          },
-        }),
-      );
+    conn.onicecandidate = (ice: RTCPeerConnectionIceEvent) => {
+      const event: PeerEvent<RTCIceCandidate> = { data: ice.candidate!, nickname };
+      this.networkListener.dispatch(EventType.ICE, event);
     };
 
     conn.onsignalingstatechange = () => {
       if (conn.signalingState === "closed") {
-        this.peers.delete(nickname);
+        this.networkListener.dispatch(EventType.PEER_DISCONNECTED, nickname);
+        this.peerStorage.delete(nickname);
       }
     };
   }
@@ -258,9 +240,9 @@ export class PeerManager extends EventTarget {
     return (event: MessageEvent<string>) => {
       this.mutex.runExclusive(() => {
         const block = JSON.parse(event.data) as Block;
-        insertBroadcastedBlock(block).catch((e) => {
+        this.dbManager.insertBroadcastedBlock(block).catch((e) => {
           console.log(e);
-          const peer = this.peers.get(nickname)!;
+          const peer = this.peerStorage.get(nickname)!;
           peer.connection.close();
         });
       });
@@ -271,9 +253,9 @@ export class PeerManager extends EventTarget {
     return (event: MessageEvent<string>) => {
       this.mutex.runExclusive(() => {
         const tx = JSON.parse(event.data) as Transaction;
-        insertBroadcastedTx(tx).catch((e) => {
+        this.dbManager.insertBroadcastedTx(tx).catch((e) => {
           console.log(e);
-          const peer = this.peers.get(nickname)!;
+          const peer = this.peerStorage.get(nickname)!;
           peer.connection.close();
         });
       });
@@ -282,12 +264,11 @@ export class PeerManager extends EventTarget {
 
   private handleOpenChat(nickname: string, _: RTCDataChannel) {
     return (event: MessageEvent<string>) => {
-      const payload: ChatPayload = {
+      const payload: PeerEvent<ChatPayload> = {
+        data: { data: event.data, timestamp: new Date() },
         nickname,
-        data: event.data,
-        timestamp: new Date(),
       };
-      console.log(payload);
+      this.networkListener.dispatch(EventType.CHAT, payload);
     };
   }
 
