@@ -8,7 +8,7 @@ const (
 var (
 	HeadHash = GenesisHash()
 
-	MinerAddr = []byte("ffffffffffff")
+	MinerAddr []byte
 )
 
 func GenesisHash() []byte {

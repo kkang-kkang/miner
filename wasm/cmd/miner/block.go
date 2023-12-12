@@ -186,6 +186,8 @@ func saveBlockToStorage(ctx context.Context, block *block.Block) error {
 		return errors.Wrap(err, "failed to insert transactions")
 	}
 
+	blockchain.HeadHash = block.Header.CurHash
+
 	return nil
 }
 
