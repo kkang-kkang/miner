@@ -29,6 +29,31 @@ async function initWasmWorker() {
         postMessage(new Message(MessageTypes.BLOCK_INSERTED, {}));
         break;
       }
+      case MessageTypes.CREATE_GENESIS: {
+        await self.createGenesis();
+        postMessage(new Message(MessageTypes.BLOCK_CREATED, {}));
+        break;
+      }
+      case MessageTypes.CREATE_KEY_PAIR: {
+        const val = await self.createKeyPair();
+        postMessage(new Message(MessageTypes.BLOCK_CREATED, val));
+        break;
+      }
+      case MessageTypes.SET_MINER_ADDR: {
+        await self.setMinerAddress(event.data.data as string);
+        postMessage(new Message(MessageTypes.MINER_ADDR_SET, {}));
+        break;
+      }
+      case MessageTypes.GET_HEAD_HASH: {
+        const val = await self.getHeadHash();
+        postMessage(new Message(MessageTypes.GOT_HEAD_HASH, val));
+        break;
+      }
+      case MessageTypes.GET_BALANCE: {
+        const val = await self.getBalance(event.data.data as string);
+        postMessage(new Message(MessageTypes.GOT_BALANCE, val));
+        break;
+      }
     }
   };
 

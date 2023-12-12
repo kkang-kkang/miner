@@ -15,7 +15,20 @@ export enum MessageTypes {
   TX_INSERTED = "txInserted",
 
   CREATE_BLOCK = "createBlock",
+  CREATE_GENESIS = "createGenesis",
   BLOCK_CREATED = "blockCreated",
   INSERT_BLOCK = "insertBlock",
   BLOCK_INSERTED = "blockInserted",
+
+  CREATE_KEY_PAIR = "createKeyPair",
+  KEY_PAIR_CREATED = "keyPairCreated",
+
+  SET_MINER_ADDR = "setMinerAddr",
+  MINER_ADDR_SET = "minerAddrSet",
+
+  GET_HEAD_HASH = "getHeadHash",
+  GOT_HEAD_HASH = "gotHeadHash",
+
+  GET_BALANCE = "getBalance",
+  GOT_BALANCE = "gotBalance",
 }

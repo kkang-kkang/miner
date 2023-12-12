@@ -26,30 +26,43 @@ declare global {
     outputs: TxOut[];
   };
 
+  export type BlockBody = {
+    coinbaseTx: Transaction | undefined;
+    txs: Transaction[] | undefined;
+    coinbaseTxHash: string;
+    txHashes: string[];
+  };
+
+  export type BlockHeader = {
+    curHash: string;
+    prevHash: string;
+    dataHash: string;
+    difficulty: number;
+    nonce: number;
+    timestamp: string;
+  };
+
   export type Block = {
-    header: {
-      curHash: string;
-      prevHash: string;
-      dataHash: string;
-      difficulty: number;
-      nonce: number;
-      timestamp: string;
-    };
-    body: {
-      coinbaseTx: Transaction | undefined;
-      txs: Transaction[] | undefined;
-      coinbaseTxHash: string;
-      txHashes: string;
-    };
+    header: BlockHeader;
+    body: BlockBody;
+  };
+
+  export type KeyPair = {
+    publicKey: string;
+    privateKey: string;
   };
 
   export interface Window {
     Go: any;
-    createNewTx: (input: TxCandidate) => Promise<Transaction>;
     createBlock: (input: BlockCandidate) => Promise<Block>;
-    insertBroadcastedTx: (candidate: Transaction) => Promise<void>;
+    createNewTx: (input: TxCandidate) => Promise<Transaction>;
     insertBroadcastedBlock: (candidate: Block) => Promise<void>;
+    insertBroadcastedTx: (candidate: Transaction) => Promise<void>;
     createGenesis: () => Promise<void>;
+    createKeyPair: () => Promise<KeyPair>;
+    setMinerAddress: (addr: string) => Promise<void>;
+    getHeadHash: () => Promise<string>;
+    getBalance: (addr: string) => Promise<number>;
 
     getDevice: () => any;
   }
