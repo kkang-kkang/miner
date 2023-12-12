@@ -1,3 +1,11 @@
+import {
+  createGenesis,
+  getHeadHash,
+  insertBroadcastedBlock,
+  insertBroadcastedTx,
+} from "../event/dispatchers";
+import { getBalance } from "../event/dispatchers/getBalance";
+
 export enum ObjectStore {
   TRANSACTION = "transaction",
   BLOCK_BODIES = "blockBodies",
@@ -6,6 +14,38 @@ export enum ObjectStore {
 }
 
 export class DBManager {
+  public async createGenesisBlock() {
+    await createGenesis();
+  }
+
+  public async insertBroadcastedBlock(block: Block) {
+    await insertBroadcastedBlock(block);
+  }
+
+  public async insertBroadcastedTx(tx: Transaction) {
+    await insertBroadcastedTx(tx);
+  }
+
+  public getHeadHash(): Promise<string> {
+    return getHeadHash();
+  }
+
+  public getBalance(addr: string): Promise<number> {
+    return getBalance(addr);
+  }
+
+  public getBlockCount(): Promise<number> {
+    return new Promise((resolve) => {
+      this.withTx(ObjectStore.BLOCK_HEADERS, "readonly", (tx: IDBTransaction) => {
+        const storage = tx.objectStore(ObjectStore.BLOCK_HEADERS);
+        const req = storage.count();
+        req.onsuccess = () => {
+          resolve(req.result);
+        };
+      });
+    });
+  }
+
   public async iterateAll(
     objStore: ObjectStore,
     f: (key: string, value: any) => void,
@@ -23,6 +63,20 @@ export class DBManager {
 
         cursor.continue();
       };
+    });
+  }
+
+  public get(objStore: ObjectStore, key: string): Promise<any> {
+    return new Promise((resolve) => {
+      this.withTx(objStore, "readonly", (tx: IDBTransaction) => {
+        const storage = tx.objectStore(objStore);
+        const req = storage.getKey(key);
+
+        req.onsuccess = () => {
+          const val = req.result;
+          return resolve(val);
+        };
+      });
     });
   }
 
