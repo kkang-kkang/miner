@@ -16,6 +16,10 @@ func main() {
 	js.Global().Set("createGenesis", createGenesis())
 	js.Global().Set("insertBroadcastedTx", insertBroadcastedTx())
 	js.Global().Set("insertBroadcastedBlock", insertBroadcastedBlock())
+	js.Global().Set("createKeyPair", createKeyPair())
+	js.Global().Set("setMinerAddress", setMinerAddress())
+	js.Global().Set("getHeadHash", getHeadHash())
+	js.Global().Set("getBalance", getBalance())
 
 	select {}
 }
