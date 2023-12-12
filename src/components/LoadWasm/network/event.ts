@@ -5,10 +5,48 @@ export enum EventType {
   BLOCK_CREATED = "block-created",
   TX_CREATED = "tx-created",
   NEW_TX = "new-tx",
+  PEER_CONNECTED = "peer-conneced",
+  PEER_DISCONNECTED = "peer-disconnected",
+  SEND_BLOCKCHAIN = "send-blockchain",
+  RECEIVE_BLOCKCHAIN = "receive-blockchain",
+  CHAT = "chat",
 }
+
+export type BlockQuery = {
+  head: string;
+  count: number;
+};
+
+export type BlockSummary = {
+  curHash: string;
+  prevHash: string;
+  timestamp: string;
+  txCount: number;
+};
+
+export type BalancePayload = {
+  balance: number;
+};
+
+export type AddrPayload = {
+  addr: string;
+};
+
+export type HashPayload = {
+  hash: string;
+};
+
+export type ChatPayload = {
+  data: string;
+  timestamp: Date;
+};
 
 export type PeerEvent<T> = {
   nickname: string;
   data: T;
 };
 
+export type IDEvent<T> = {
+  id: string;
+  data: T;
+};
