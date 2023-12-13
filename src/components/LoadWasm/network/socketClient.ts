@@ -21,39 +21,50 @@ enum Request {
 }
 
 export class SocketClient {
-  private readonly socket: Socket;
+  private readonly networkListener: NetworkListener;
+  private readonly dbManager: DBManager;
 
-  constructor(
-    private readonly networkListener: NetworkListener,
-    private readonly dbManager: DBManager,
-    nickname: string,
-  ) {
+  private socket?: Socket;
+  private nickname = "";
+
+  constructor(networkListener: NetworkListener, dbManager: DBManager) {
+    this.networkListener = networkListener;
+    this.dbManager = dbManager;
+  }
+
+  public connect(nickname: string, host: string, port: number): Promise<void> {
+    this.nickname = nickname;
     this.socket = io({
-      host: "",
-      port: 1111,
       transports: ["websocket"],
       auth: {
-        nickname,
+        nickname: this.nickname,
       },
+      host,
+      port,
     });
     this.registerListeners();
+
+    return new Promise((resolve, reject) => {
+      this.socket!.on("connection", resolve);
+      this.socket!.on("connect_error", reject);
+    });
   }
 
   public sendOffer(offer: RTCSessionDescription) {
     const event: PeerEvent<string> = { nickname: "", data: offer.sdp };
-    this.socket.emit(EventType.OFFER, event);
+    this.socket!.emit(EventType.OFFER, event);
   }
 
   private registerListeners() {
-    this.socket.on(Request.FIND_BLOCK, this.handleFindBlock);
-    this.socket.on(Request.FIND_TX, this.handleFindTx);
-    this.socket.on(Request.GET_BALANCE, this.handleGetBalance);
-    this.socket.on(Request.LIST_BLOCK, this.handleListBlock);
-    this.socket.on(Request.NEW_TX, this.handleNewTx);
+    this.socket!.on(Request.FIND_BLOCK, this.handleFindBlock);
+    this.socket!.on(Request.FIND_TX, this.handleFindTx);
+    this.socket!.on(Request.GET_BALANCE, this.handleGetBalance);
+    this.socket!.on(Request.LIST_BLOCK, this.handleListBlock);
+    this.socket!.on(Request.NEW_TX, this.handleNewTx);
 
-    this.socket.on(EventType.OFFER, this.handleOffer);
-    this.socket.on(EventType.ANSWER, this.handleAnswer);
-    this.socket.on(EventType.ICE, this.handleReceiveIce);
+    this.socket!.on(EventType.OFFER, this.handleOffer);
+    this.socket!.on(EventType.ANSWER, this.handleAnswer);
+    this.socket!.on(EventType.ICE, this.handleReceiveIce);
 
     this.networkListener.attachListener(EventType.TX_CREATED, this.handleTxCreated);
     this.networkListener.attachListener(EventType.SEND_ICE, this.handleSendIce);
@@ -62,12 +73,12 @@ export class SocketClient {
 
   private sendAnswer(event: PeerEvent<RTCSessionDescription>) {
     const msg: PeerEvent<string> = { nickname: event.nickname, data: event.data.sdp };
-    this.socket.emit(EventType.ANSWER, msg);
+    this.socket!.emit(EventType.ANSWER, msg);
   }
 
   private handleSendIce(event: PeerEvent<RTCIceCandidate>) {
     const msg: PeerEvent<string> = { nickname: event.nickname, data: event.data.candidate };
-    this.socket.emit(EventType.ICE, msg);
+    this.socket!.emit(EventType.ICE, msg);
   }
 
   private handleOffer(event: PeerEvent<string>) {
@@ -104,21 +115,21 @@ export class SocketClient {
     const block = await this.findBlock(hash);
 
     const msg: IDEvent<Block | null> = { id, data: block };
-    this.socket.emit(Request.FIND_BLOCK, msg);
+    this.socket!.emit(Request.FIND_BLOCK, msg);
   }
 
   private async handleFindTx({ data: { hash }, id }: IDEvent<HashPayload>): Promise<void> {
     const tx = await this.dbManager.get(ObjectStore.TRANSACTION, hash);
 
     const msg: IDEvent<Transaction | null> = { id, data: tx ? (tx as Transaction) : null };
-    this.socket.emit(Request.FIND_TX, msg);
+    this.socket!.emit(Request.FIND_TX, msg);
   }
 
   private async handleGetBalance({ data: { addr }, id }: IDEvent<AddrPayload>): Promise<void> {
     const balance = await this.dbManager.getBalance(addr);
 
     const msg: IDEvent<BalancePayload> = { id, data: { balance } };
-    this.socket.emit(Request.GET_BALANCE, msg);
+    this.socket!.emit(Request.GET_BALANCE, msg);
   }
 
   private async handleListBlock({ data: { count, head }, id }: IDEvent<BlockQuery>): Promise<void> {
@@ -137,7 +148,7 @@ export class SocketClient {
     }
 
     const msg: IDEvent<BlockSummary[]> = { data: blockSummaries, id };
-    this.socket.emit(Request.LIST_BLOCK, msg);
+    this.socket!.emit(Request.LIST_BLOCK, msg);
   }
 
   private handleNewTx(msg: IDEvent<TxCandidate>) {
@@ -150,7 +161,7 @@ export class SocketClient {
       data: tx?.hash ?? "",
     };
 
-    this.socket.emit(Request.NEW_TX, msg);
+    this.socket!.emit(Request.NEW_TX, msg);
   }
 
   private async findBlock(hash: string): Promise<Block | null> {

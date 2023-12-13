@@ -29,12 +29,12 @@ export type PeerInfo = {
 };
 
 export class NetworkBrowser {
-  private readonly token: string;
+  private readonly token: string | null;
 
   constructor(
     private readonly dbManager: DBManager,
     private readonly peerStorage: PeerStorage,
-    token: string,
+    token: string | null,
   ) {
     this.token = token;
   }
@@ -92,7 +92,7 @@ export class NetworkBrowser {
       location: undefined,
     };
 
-    if (peer.ip != null) {
+    if (peer.ip && this.token) {
       const response = await fetch(`https://ipinfo.io/${peer.ip}/json?token=${this.token}`);
       if (!response.ok) {
         return info;
