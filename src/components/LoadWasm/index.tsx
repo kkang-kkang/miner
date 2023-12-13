@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "./LoadWasm.css";
+import { initializeNode } from "./dependency";
 import { CallbackEvent } from "./event";
-import { createBlock, createTx } from "./event/dispatchers";
 
 function loadWasm(): Promise<void> {
   return new Promise<void>((resolve) => {
@@ -33,14 +33,12 @@ export const LoadWasm: React.FC<React.PropsWithChildren<{}>> = (props) => {
     loadWasm()
       .then(() => setIsLoading(false))
       .then(async () => {
-        const tx = await createTx({
-          amount: 0,
-          dstAddress: "ffffff",
-          privateKey: "17c9cfe25b1f2262e8ec2d8b65f502ef946d5ba4bc12bbd622755340bd9b3638",
-        });
-        await createBlock({
-          transactionHashes: [tx.hash],
-        });
+        let nickname: string | null;
+        do {
+          nickname = prompt("nickname");
+        } while (nickname == null);
+
+        await initializeNode(nickname, prompt("token"));
       });
   }, []);
 
