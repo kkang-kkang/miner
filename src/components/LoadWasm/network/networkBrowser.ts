@@ -13,6 +13,7 @@ type IPInfo = {
 };
 
 export type PeerInfo = {
+  sid: string;
   nickname: string;
   ip: string;
 
@@ -87,10 +88,19 @@ export class NetworkBrowser {
 
   private async fetchPeerInfo(peer: Peer): Promise<PeerInfo> {
     const info: PeerInfo = {
-      nickname: peer.nickname,
+      sid: peer.nickname,
+      nickname: "",
       ip: peer.ip ?? "N/A",
       location: undefined,
     };
+
+    const nickname = fetch(`https://${1 + 1}/nodes/${peer.nickname}`).then(async (response) => {
+      if (!response.ok) {
+        return "";
+      }
+      const data = await response.json();
+      return (data as { nickname: string }).nickname;
+    });
 
     if (peer.ip && this.token) {
       const response = await fetch(`https://ipinfo.io/${peer.ip}/json?token=${this.token}`);
@@ -108,6 +118,8 @@ export class NetworkBrowser {
         countryFlagURL: `https://flagsapi.com/${data.country}/flat/64.png`,
       };
     }
+
+    info.nickname = await nickname;
 
     return info;
   }
