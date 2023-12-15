@@ -3,7 +3,7 @@ package key
 import (
 	"crypto/ecdh"
 	"crypto/ecdsa"
-	"crypto/x509"
+	"crypto/elliptic"
 	"math/big"
 	"miner/internal/misc/util"
 
@@ -16,7 +16,12 @@ func ParseECDSAPublicKey(b []byte) (*ecdsa.PublicKey, error) {
 		return nil, err
 	}
 
-	return parsePublic(b)
+	key, err := ecdh.P256().NewPublicKey(b)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to generate public key from bytes")
+	}
+
+	return ecdhPublicToEcdsa(key), nil
 }
 
 func ParseECDSAPrivateKey(b []byte) (*ecdsa.PrivateKey, error) {
@@ -30,11 +35,7 @@ func ParseECDSAPrivateKey(b []byte) (*ecdsa.PrivateKey, error) {
 		return nil, errors.Wrap(err, "cannot create ecdsa private key from bytes")
 	}
 
-	pubKey, err := parsePublic(key.PublicKey().Bytes())
-	if err != nil {
-		return nil, err
-	}
-
+	pubKey := ecdhPublicToEcdsa(key.PublicKey())
 	privKey := &ecdsa.PrivateKey{
 		PublicKey: *pubKey,
 		D:         new(big.Int).SetBytes(key.Bytes()),
@@ -43,15 +44,11 @@ func ParseECDSAPrivateKey(b []byte) (*ecdsa.PrivateKey, error) {
 	return privKey, nil
 }
 
-func parsePublic(b []byte) (*ecdsa.PublicKey, error) {
-	key, err := x509.ParsePKIXPublicKey(b)
-	if err != nil {
-		return nil, errors.Wrap(err, "cannot create ecdsa public key from bytes")
+func ecdhPublicToEcdsa(key *ecdh.PublicKey) *ecdsa.PublicKey {
+	b := key.Bytes()
+	return &ecdsa.PublicKey{
+		Curve: elliptic.P256(),
+		X:     big.NewInt(0).SetBytes(b[1:33]),
+		Y:     big.NewInt(0).SetBytes(b[33:]),
 	}
-
-	ecdsaKey, ok := key.(*ecdsa.PublicKey)
-	if !ok {
-		return nil, errors.New("key is not type of ecdsa.PublicKey")
-	}
-	return ecdsaKey, nil
 }
