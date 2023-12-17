@@ -1,6 +1,6 @@
 import { Mutex } from "async-mutex";
 import { Channel, DBManager, ObjectStore, PeerStorage } from "../misc";
-import { ChatPayload, EventType, PeerEvent } from "./event";
+import { ChatPayload, EventType, IDEvent, PeerEvent } from "./event";
 import { NetworkListener } from "./networkListener";
 
 const iceServers: RTCIceServer[] = [
@@ -209,11 +209,16 @@ export class PeerManager {
     return (event: MessageEvent<string>) => {
       this.mutex.runExclusive(() => {
         const block = JSON.parse(event.data) as Block;
-        this.dbManager.insertBroadcastedBlock(block).catch((e) => {
-          console.log(e);
-          const peer = this.peerStorage.get(nickname)!;
-          peer.connection.close();
-        });
+        this.dbManager
+          .insertBroadcastedBlock(block)
+          .then(() => {
+            this.networkListener.dispatch(EventType.BLOCK_CREATED, block);
+          })
+          .catch((e) => {
+            console.log(e);
+            const peer = this.peerStorage.get(nickname)!;
+            peer.connection.close();
+          });
       });
     };
   }
@@ -222,11 +227,17 @@ export class PeerManager {
     return (event: MessageEvent<string>) => {
       this.mutex.runExclusive(() => {
         const tx = JSON.parse(event.data) as Transaction;
-        this.dbManager.insertBroadcastedTx(tx).catch((e) => {
-          console.log(e);
-          const peer = this.peerStorage.get(nickname)!;
-          peer.connection.close();
-        });
+        this.dbManager
+          .insertBroadcastedTx(tx)
+          .then(() => {
+            const msg: IDEvent<Transaction | null> = { data: tx, id: "" };
+            this.networkListener.dispatch(EventType.TX_CREATED, msg);
+          })
+          .catch((e) => {
+            console.log(e);
+            const peer = this.peerStorage.get(nickname)!;
+            peer.connection.close();
+          });
       });
     };
   }

@@ -13,7 +13,7 @@ import {
 const mutex = new Mutex();
 const peerStorage = new PeerStorage();
 const dbManager = new DBManager();
-const networkListener = new NetworkListener();
+export const networkListener = new NetworkListener();
 let peerManager: PeerManager;
 let socketClient: SocketClient;
 export let networkBrowser: NetworkBrowser;
@@ -25,6 +25,6 @@ export async function initializeNode(nickname: string, token: string | null) {
   peerManager = new PeerManager(mutex, dbManager, peerStorage, networkListener);
   networkManager = new NetworkManager(networkListener, peerManager, socketClient, mutex);
 
-  await socketClient.connect(nickname, "", 1).catch(console.error);
+  await socketClient.connect(nickname, { host: "", port: 1 }).catch(console.error);
   await networkManager.sendOffer();
 }

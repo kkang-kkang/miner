@@ -32,15 +32,15 @@ export class SocketClient {
     this.dbManager = dbManager;
   }
 
-  public connect(nickname: string, host: string, port: number): Promise<void> {
+  public connect(nickname: string, addr: { host: string; port: number }): Promise<void> {
     this.nickname = nickname;
     this.socket = io({
       transports: ["websocket"],
       auth: {
         nickname: this.nickname,
       },
-      host,
-      port,
+      host: addr.host,
+      port: addr.port,
     });
     this.registerListeners();
 
@@ -88,7 +88,7 @@ export class SocketClient {
       data: sessionDescription,
       nickname: event.nickname,
     };
-    this.networkListener.dispatch(EventType.OFFER, msg);
+    this.networkListener.dispatch(EventType.RECEIVE_OFFER, msg);
   }
 
   private handleAnswer(event: PeerEvent<string>) {
@@ -98,7 +98,7 @@ export class SocketClient {
       data: sessionDescription,
       nickname: event.nickname,
     };
-    this.networkListener.dispatch(EventType.ANSWER, msg);
+    this.networkListener.dispatch(EventType.RECEIVE_ANSWER, msg);
   }
 
   private handleReceiveIce(event: PeerEvent<string>) {
@@ -156,6 +156,7 @@ export class SocketClient {
   }
 
   private handleTxCreated({ data: tx, id }: IDEvent<Transaction | null>) {
+    if (id === "") return;
     const msg: IDEvent<string> = {
       id,
       data: tx?.hash ?? "",

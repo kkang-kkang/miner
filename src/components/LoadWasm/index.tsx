@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import "./LoadWasm.css";
-import { initializeNode } from "./dependency";
+import { initializeNode, networkListener } from "./dependency";
 import { CallbackEvent } from "./event";
+import { ChatPayload, EventType, IDEvent, PeerEvent } from "./network/event";
 
 function loadWasm(): Promise<void> {
   return new Promise<void>((resolve) => {
@@ -14,9 +15,8 @@ function loadWasm(): Promise<void> {
       console.error(ev);
     };
 
-    window.addEventListener("invoke", async (event) => {
-      const callbackEvent = event as CallbackEvent;
-      await callbackEvent.callback(worker);
+    window.addEventListener("invoke", (event) => {
+      (event as CallbackEvent).callback(worker);
     });
 
     worker.onmessage = () => {
@@ -39,6 +39,38 @@ export const LoadWasm: React.FC<React.PropsWithChildren<{}>> = (props) => {
         } while (nickname == null);
 
         await initializeNode(nickname, prompt("token"));
+      })
+      .then(() => {
+        networkListener.attachListener(EventType.PEER_CONNECTED, (nickname: string) => {
+          console.log(nickname, "connected");
+        });
+        networkListener.attachListener(EventType.PEER_DISCONNECTED, (nickname: string) => {
+          console.log(nickname, "disconnected");
+        });
+        networkListener.attachListener(EventType.SEND_BLOCKCHAIN, () => {
+          console.log("sending blockchain");
+        });
+        networkListener.attachListener(EventType.RECEIVE_BLOCKCHAIN, () => {
+          console.log("receiving blockchain");
+        });
+        networkListener.attachListener(EventType.CHAT, (event: PeerEvent<ChatPayload>) => {
+          const {
+            nickname,
+            data: { data, timestamp },
+          } = event;
+          console.log(timestamp.toISOString(), `${nickname}: ${data}`);
+        });
+        networkListener.attachListener(EventType.NEW_TX, (event: IDEvent<TxCandidate>) => {
+          const { data: tx, id } = event;
+          console.log(`new tx requested: ${id}`, tx);
+        });
+        networkListener.attachListener(EventType.TX_CREATED, (event: IDEvent<TxCandidate>) => {
+          const { data: tx, id } = event;
+          console.log(`new tx created: ${id}`, tx);
+        });
+        networkListener.attachListener(EventType.BLOCK_CREATED, (block: Block) => {
+          console.log("new block", block);
+        });
       });
   }, []);
 

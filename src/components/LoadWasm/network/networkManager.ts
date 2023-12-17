@@ -26,6 +26,7 @@ export class NetworkManager {
   public broadcastNewBlock(block: Block) {
     this.mutex.runExclusive(() => {
       this.peerManager.broadcastBlock(block);
+      this.networkListener.dispatch(EventType.BLOCK_CREATED, block);
     });
   }
 
