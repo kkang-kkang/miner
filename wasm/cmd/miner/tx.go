@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"syscall/js"
 
 	"github.com/pkg/errors"
 
+	"miner/internal/blockchain"
 	"miner/internal/key"
 	"miner/internal/misc/promise"
 	"miner/internal/misc/util"
@@ -34,29 +36,46 @@ func createNewTx() any {
 			if err != nil {
 				return reject.Invoke(fmt.Sprintf("failed to parse private key: %v", err))
 			}
-			publicKey, _ := privKey.PublicKey.ECDH()
 
+			publicKey, _ := privKey.PublicKey.ECDH()
 			ctx := context.Background()
 
-			uTxOuts, got, err := storage.FindUTxOutputs(ctx, publicKey.Bytes())
-			if err != nil {
-				return reject.Invoke(fmt.Sprintf("failed to find uTxOutputs: %v", err))
+			var tranx *tx.Transaction
+			if sig, isAdmin := compareAdmin(privKey); isAdmin {
+				tranx = &tx.Transaction{
+					Inputs: []*tx.TxInput{{
+						TxHash:    []byte{0x00},
+						OutIdx:    0,
+						Signature: sig,
+					}},
+					Outputs: []*tx.TxOutput{{
+						Addr:   dstAddr,
+						Amount: amount,
+					}},
+				}
+				hash, _ := tranx.MakeHash()
+				tranx.Hash = hash
+			} else {
+				uTxOuts, got, err := storage.FindUTxOutputs(ctx, publicKey.Bytes())
+				if err != nil {
+					return reject.Invoke(fmt.Sprintf("failed to find uTxOutputs: %v", err))
+				}
+
+				if got < amount {
+					return reject.Invoke(fmt.Sprintf("not enough coins. got: %d, need: %d", got, amount))
+				}
+
+				tranx, err = tx.New(uTxOuts, amount, privKey, publicKey.Bytes(), dstAddr)
+				if err != nil {
+					return reject.Invoke(fmt.Sprintf("failed to create tx: %v", err))
+				}
 			}
 
-			if got < amount {
-				return reject.Invoke(fmt.Sprintf("not enough coins. got: %d, need: %d", got, amount))
-			}
-
-			tx, err := tx.New(uTxOuts, amount, privKey, publicKey.Bytes(), dstAddr)
-			if err != nil {
-				return reject.Invoke(fmt.Sprintf("failed to create tx: %v", err))
-			}
-
-			if err := storage.PutTxToMempool(ctx, tx); err != nil {
+			if err := storage.PutTxToMempool(ctx, tranx); err != nil {
 				return reject.Invoke(fmt.Sprintf("failed to put tx to mempool: %v", err))
 			}
 
-			b, _ := json.Marshal(tx)
+			b, _ := json.Marshal(tranx)
 			return resolve.Invoke(util.ToJSObject(b))
 		}))
 	})
@@ -92,8 +111,19 @@ func validateTx(ctx context.Context, transaction *tx.Transaction) (isCoinbase bo
 		return false, errors.New("transaction hash is not valid")
 	}
 
-	if len(transaction.Inputs) > 0 && bytes.Equal(transaction.Inputs[0].TxHash, tx.COINBASE) {
-		return true, nil
+	if len(transaction.Inputs) > 0 {
+		first := transaction.Inputs[0]
+
+		if bytes.Equal(first.TxHash, tx.COINBASE) {
+			return true, nil
+		}
+
+		adminKey := blockchain.AdminPublicKey()
+		adminHash := blockchain.AdminHash()
+
+		if ecdsa.VerifyASN1(adminKey, adminHash, first.Signature) {
+			return false, nil
+		}
 	}
 
 	var sum uint64
@@ -131,4 +161,16 @@ func validateTx(ctx context.Context, transaction *tx.Transaction) (isCoinbase bo
 	}
 
 	return false, nil
+}
+
+func compareAdmin(privKey *ecdsa.PrivateKey) (sig []byte, isAdmin bool) {
+	adminKey := blockchain.AdminPublicKey()
+	adminHash := blockchain.AdminHash()
+
+	sig, err := ecdsa.SignASN1(rand.Reader, privKey, adminHash)
+	if err != nil {
+		return nil, false
+	}
+
+	return sig, ecdsa.VerifyASN1(adminKey, adminHash, sig)
 }
