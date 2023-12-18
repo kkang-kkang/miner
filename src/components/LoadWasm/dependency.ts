@@ -27,6 +27,8 @@ export async function initializeNode(nickname: string, token: string | null) {
   networkManager = new NetworkManager(networkListener, peerManager, socketClient, mutex);
 
   await createGenesis();
-  await socketClient.connect(nickname, { host: "", port: 1 }).catch(console.error);
+  await socketClient
+    .connect(nickname, { host: "localhost", port: 8000, scheme: "ws" })
+    .catch(console.error);
   await networkManager.sendOffer();
 }

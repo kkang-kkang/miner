@@ -32,20 +32,21 @@ export class SocketClient {
     this.dbManager = dbManager;
   }
 
-  public connect(nickname: string, addr: { host: string; port: number }): Promise<void> {
+  public connect(
+    nickname: string,
+    addr: { scheme: string; host: string; port: number },
+  ): Promise<void> {
     this.nickname = nickname;
-    this.socket = io({
+    this.socket = io(`${addr.scheme}://${addr.host}:${addr.port}/socket.io`, {
       transports: ["websocket"],
       auth: {
         nickname: this.nickname,
       },
-      host: addr.host,
-      port: addr.port,
     });
     this.registerListeners();
 
     return new Promise((resolve, reject) => {
-      this.socket!.on("connection", resolve);
+      this.socket!.on("connect", resolve);
       this.socket!.on("connect_error", reject);
     });
   }
