@@ -76,6 +76,7 @@ export class PeerManager {
         }
 
         const { data, kind: storage } = JSON.parse(event.data) as CloneUnit;
+        if (data.key === "00") return;
         await this.dbManager.insert(storage, data.key, data.value);
       };
     });
