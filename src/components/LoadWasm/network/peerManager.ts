@@ -130,22 +130,8 @@ export class PeerManager {
 
   public async acceptAnswer({ data: answer, nickname }: PeerEvent<RTCSessionDescription>) {
     const connection = new RTCPeerConnection({ iceServers });
+
     const datachannels = new Map<Channel, RTCDataChannel>();
-    connection.ondatachannel = ({ channel }: RTCDataChannelEvent) => {
-      this.attatchListener(nickname, channel);
-      datachannels.set(channel.label as Channel, channel);
-    };
-
-    connection.createDataChannel(Channel.BROADCAST_BLOCK);
-    connection.createDataChannel(Channel.BROADCAST_TX);
-    connection.createDataChannel(Channel.CLONE);
-    connection.createDataChannel(Channel.OPEN_CHAT);
-
-    await connection.setLocalDescription(await connection.createOffer());
-    await connection.setRemoteDescription(answer);
-
-    this.initPeerListener(nickname, connection);
-
     this.peerStorage.put({
       connected: true,
       ip: null,
@@ -155,6 +141,22 @@ export class PeerManager {
       datachannels,
     });
 
+    this.initPeerListener(nickname, connection);
+
+    const channels = [
+      connection.createDataChannel(Channel.BROADCAST_BLOCK, { negotiated: true, id: 0 }),
+      connection.createDataChannel(Channel.BROADCAST_TX, { negotiated: true, id: 1 }),
+      connection.createDataChannel(Channel.CLONE, { negotiated: true, id: 2 }),
+      connection.createDataChannel(Channel.OPEN_CHAT, { negotiated: true, id: 3 }),
+    ];
+    channels.forEach((channel) => {
+      this.attatchListener(nickname, channel);
+      datachannels.set(channel.label as Channel, channel);
+    });
+
+    await connection.setLocalDescription(await connection.createOffer());
+    await connection.setRemoteDescription(answer);
+
     const msg: PeerEvent<string> = { nickname, data: "" };
     this.networkListener.dispatch(EventType.SEND_ANSWER_ACK, msg);
     this.networkListener.dispatch(EventType.PEER_CONNECTED, nickname);
@@ -163,25 +165,7 @@ export class PeerManager {
   private async acceptOffer({ data: offer, nickname }: PeerEvent<RTCSessionDescription>) {
     const connection = new RTCPeerConnection({ iceServers });
 
-    await connection.setRemoteDescription(offer);
-    const answer = await connection.createAnswer();
-    await connection.setLocalDescription(answer);
-
     const datachannels = new Map<Channel, RTCDataChannel>();
-
-    const channels = [
-      connection.createDataChannel(Channel.BROADCAST_BLOCK),
-      connection.createDataChannel(Channel.BROADCAST_TX),
-      connection.createDataChannel(Channel.CLONE),
-      connection.createDataChannel(Channel.OPEN_CHAT),
-    ];
-    channels.forEach((channel) => {
-      this.attatchListener(nickname, channel);
-      datachannels.set(channel.label as Channel, channel);
-    });
-
-    this.initPeerListener(nickname, connection);
-
     this.peerStorage.put({
       connected: false,
       ip: null,
@@ -190,6 +174,22 @@ export class PeerManager {
       connection,
       datachannels,
     });
+    this.initPeerListener(nickname, connection);
+
+    const channels = [
+      connection.createDataChannel(Channel.BROADCAST_BLOCK, { negotiated: true, id: 0 }),
+      connection.createDataChannel(Channel.BROADCAST_TX, { negotiated: true, id: 1 }),
+      connection.createDataChannel(Channel.CLONE, { negotiated: true, id: 2 }),
+      connection.createDataChannel(Channel.OPEN_CHAT, { negotiated: true, id: 3 }),
+    ];
+    channels.forEach((channel) => {
+      this.attatchListener(nickname, channel);
+      datachannels.set(channel.label as Channel, channel);
+    });
+
+    await connection.setRemoteDescription(offer);
+    const answer = await connection.createAnswer();
+    await connection.setLocalDescription(answer);
 
     const msg: PeerEvent<RTCSessionDescription> = { data: connection.localDescription!, nickname };
     this.networkListener.dispatch(EventType.SEND_ANSWER, msg);
@@ -203,9 +203,9 @@ export class PeerManager {
   }
 
   private initPeerListener(nickname: string, conn: RTCPeerConnection) {
+    const peer = this.peerStorage.get(nickname)!;
     conn.onicecandidate = (ice: RTCPeerConnectionIceEvent) => {
       if (ice.candidate) {
-        const peer = this.peerStorage.get(nickname)!;
         if (peer.connected) {
           const event: PeerEvent<RTCIceCandidate> = { data: ice.candidate, nickname };
           this.networkListener.dispatch(EventType.SEND_ICE, event);
@@ -215,8 +215,9 @@ export class PeerManager {
       }
     };
 
-    conn.onsignalingstatechange = () => {
-      if (conn.signalingState === "closed") {
+    conn.onconnectionstatechange = () => {
+      console.log(conn.connectionState);
+      if (conn.connectionState === "closed") {
         this.networkListener.dispatch(EventType.PEER_DISCONNECTED, nickname);
         this.peerStorage.delete(nickname);
       }
