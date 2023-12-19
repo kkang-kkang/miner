@@ -83,7 +83,7 @@ export class DBManager {
   public async insert(objStore: ObjectStore, key: string, val: string) {
     await this.withTx(objStore, "readwrite", (tx: IDBTransaction) => {
       const storage = tx.objectStore(objStore);
-      storage.add(JSON.parse(val), key);
+      storage.add(val, key);
     });
   }
 
@@ -104,7 +104,7 @@ export class DBManager {
 
   private open(objStore: ObjectStore, mode: IDBTransactionMode): Promise<IDBTransaction> {
     return new Promise((resolve) => {
-      const request = indexedDB.open(objStore);
+      const request = indexedDB.open("blockchain");
       request.onsuccess = () => {
         const db = request.result;
         const tx = db.transaction(objStore, mode);

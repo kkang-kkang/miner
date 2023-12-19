@@ -87,15 +87,24 @@ export default function App() {
         hi submit your message
       </button>
       <div>
+        <button
+          onClick={() => {
+            networkManager.cloneBlockchain();
+          }}
+        >
+          clone blockchain
+        </button>
+      </div>
+      <div>
         <div>
           <div>
             haha peers i guess
             <div />
             {peers.map((peer) => (
               <>
-                <span>{peer.ip}</span>
+                <span>{peer.ip} </span>
                 <span>{peer.location?.city}</span>
-                <span>{peer.nickname}</span>
+                <span>{peer.nickname} </span>
                 <span>{peer.sid}</span>
               </>
             ))}

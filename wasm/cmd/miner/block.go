@@ -79,7 +79,7 @@ func createGenesis() any {
 					DataHash:   blockchain.GenesisHash(),
 					Difficulty: 0,
 					Nonce:      0,
-					Timestamp:  time.Now(),
+					Timestamp:  time.Time{},
 				},
 			}
 

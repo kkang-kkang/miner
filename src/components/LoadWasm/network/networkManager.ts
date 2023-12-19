@@ -30,7 +30,7 @@ export class NetworkManager {
 
   public cloneBlockchain() {
     this.mutex.runExclusive(async () => {
-      await this.cloneBlockchain();
+      await this.peerManager.cloneBlockchain();
     });
   }
 
