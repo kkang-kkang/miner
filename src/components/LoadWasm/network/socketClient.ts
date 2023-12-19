@@ -47,14 +47,12 @@ export class SocketClient {
     this.registerListeners();
 
     return new Promise((resolve, reject) => {
-      this.socket!.on("connect", resolve);
+      this.socket!.on("connect", () => {
+        this.socket!.emit(EventType.NEW_PEER, "");
+        resolve();
+      });
       this.socket!.on("connect_error", reject);
     });
-  }
-
-  public sendOffer(offer: RTCSessionDescription) {
-    const event: PeerEvent<string> = { nickname: "", data: offer.sdp };
-    this.socket!.emit(EventType.OFFER, event);
   }
 
   private registerListeners() {
@@ -68,11 +66,18 @@ export class SocketClient {
     this.socket!.on(EventType.ANSWER, this.handleAnswer.bind(this));
     this.socket!.on(EventType.ICE, this.handleReceiveIce.bind(this));
     this.socket!.on(EventType.ANSWER_ACK, this.handleAnswerAck.bind(this));
+    this.socket!.on(EventType.NEW_PEER, this.handleNewPeer.bind(this));
 
     this.networkListener.attachListener(EventType.TX_CREATED, this.handleTxCreated.bind(this));
     this.networkListener.attachListener(EventType.SEND_ICE, this.handleSendIce.bind(this));
     this.networkListener.attachListener(EventType.SEND_ANSWER, this.sendAnswer.bind(this));
     this.networkListener.attachListener(EventType.SEND_ANSWER_ACK, this.sendAnswerAck.bind(this));
+    this.networkListener.attachListener(EventType.SEND_OFFER, this.sendOffer.bind(this));
+  }
+
+  private sendOffer(event: PeerEvent<RTCSessionDescription>) {
+    const msg: PeerEvent<string> = { nickname: event.nickname, data: event.data.sdp };
+    this.socket!.emit(EventType.OFFER, msg);
   }
 
   private sendAnswerAck(event: PeerEvent<string>) {
@@ -90,8 +95,6 @@ export class SocketClient {
   }
 
   private handleOffer(event: PeerEvent<string>) {
-    if (event.nickname === this.socket!.id) return;
-
     const sessionDescription = new RTCSessionDescription({ type: "offer", sdp: event.data });
 
     const msg: PeerEvent<RTCSessionDescription> = {
@@ -118,6 +121,11 @@ export class SocketClient {
       nickname: event.nickname,
     };
     this.networkListener.dispatch(EventType.RECEIVE_ICE, msg);
+  }
+
+  private handleNewPeer(event: PeerEvent<string>) {
+    if (event.nickname === this.socket!.id) return;
+    this.networkListener.dispatch(EventType.NEW_PEER, event);
   }
 
   private handleAnswerAck(event: PeerEvent<string>) {

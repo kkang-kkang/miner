@@ -3,13 +3,11 @@ import { createTx } from "../event/dispatchers";
 import { EventType, IDEvent } from "./event";
 import { NetworkListener } from "./networkListener";
 import { PeerManager } from "./peerManager";
-import { SocketClient } from "./socketClient";
 
 export class NetworkManager {
   constructor(
     private readonly networkListener: NetworkListener,
     private readonly peerManager: PeerManager,
-    private readonly socketClient: SocketClient,
     private readonly mutex: Mutex,
   ) {
     this.networkListener.attachListener(EventType.NEW_TX, this.handleNewTx.bind(this));
@@ -34,11 +32,6 @@ export class NetworkManager {
     this.mutex.runExclusive(async () => {
       await this.cloneBlockchain();
     });
-  }
-
-  public async sendOffer() {
-    const offer = await this.peerManager.makeOffer();
-    this.socketClient.sendOffer(offer);
   }
 
   private handleNewTx({ data: candidate, id }: IDEvent<TxCandidate>) {

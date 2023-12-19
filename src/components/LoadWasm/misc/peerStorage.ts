@@ -24,6 +24,7 @@ export class PeerStorage {
 
     this.networkListener.attachListener(EventType.PEER_CONNECTED, (nickname: string) => {
       const peer = this.get(nickname)!;
+      peer.connected = true;
       peer.iceQueue.forEach((candidate) => {
         const event: PeerEvent<RTCIceCandidate> = { data: candidate, nickname };
         this.networkListener.dispatch(EventType.SEND_ICE, event);

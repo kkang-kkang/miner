@@ -1,5 +1,8 @@
 export enum EventType {
+  NEW_PEER = "new-peer",
+
   OFFER = "offer",
+  SEND_OFFER = "send-offer",
   RECEIVE_OFFER = "receive-offer",
 
   ANSWER = "answer",

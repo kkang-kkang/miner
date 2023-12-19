@@ -30,20 +30,17 @@ type CloneUnit = {
 };
 
 export class PeerManager {
-  private initialOffer: RTCSessionDescription | undefined;
-
   constructor(
     private readonly mutex: Mutex,
     private readonly dbManager: DBManager,
     private readonly peerStorage: PeerStorage,
     private readonly networkListener: NetworkListener,
   ) {
-    this.initialOffer = undefined;
-
     this.networkListener.attachListener(EventType.RECEIVE_ICE, this.addIceCandidate.bind(this));
     this.networkListener.attachListener(EventType.RECEIVE_OFFER, this.acceptOffer.bind(this));
     this.networkListener.attachListener(EventType.RECEIVE_ANSWER, this.acceptAnswer.bind(this));
     this.networkListener.attachListener(EventType.GOT_ANSWER_ACK, this.acceptAnswerAck.bind(this));
+    this.networkListener.attachListener(EventType.NEW_PEER, this.acceptNewPeer.bind(this));
   }
 
   public broadcastChat(msg: string) {
@@ -89,23 +86,6 @@ export class PeerManager {
     });
   }
 
-  /**
-   * this should be called right after the local peer is initialized
-   */
-  public async makeOffer(): Promise<RTCSessionDescription> {
-    const initConn = new RTCPeerConnection({ iceServers });
-    initConn.createDataChannel(Channel.BROADCAST_BLOCK);
-    initConn.createDataChannel(Channel.BROADCAST_TX);
-    initConn.createDataChannel(Channel.CLONE);
-    initConn.createDataChannel(Channel.OPEN_CHAT);
-
-    const offer = await initConn.createOffer();
-    await initConn.setLocalDescription(offer);
-
-    this.initialOffer = initConn.localDescription!;
-    return this.initialOffer;
-  }
-
   public broadcastTx(tx: Transaction) {
     const jsonTx = JSON.stringify(tx);
     this.peerStorage.iterate((peer) => {
@@ -122,18 +102,17 @@ export class PeerManager {
     });
   }
 
-  public acceptAnswerAck({ nickname }: PeerEvent<string>) {
-    const peer = this.peerStorage.get(nickname)!;
-    peer.connected = true;
+  private acceptAnswerAck({ nickname }: PeerEvent<string>) {
     this.networkListener.dispatch(EventType.PEER_CONNECTED, nickname);
   }
 
-  public async acceptAnswer({ data: answer, nickname }: PeerEvent<RTCSessionDescription>) {
+  private async acceptNewPeer({ nickname }: PeerEvent<string>) {
+    console.log("new peer!!");
     const connection = new RTCPeerConnection({ iceServers });
 
     const datachannels = new Map<Channel, RTCDataChannel>();
     this.peerStorage.put({
-      connected: true,
+      connected: false,
       ip: null,
       iceQueue: [],
       nickname,
@@ -155,11 +134,21 @@ export class PeerManager {
     });
 
     await connection.setLocalDescription(await connection.createOffer());
-    await connection.setRemoteDescription(answer);
+
+    const msg: PeerEvent<RTCSessionDescription> = { nickname, data: connection.localDescription! };
+    this.networkListener.dispatch(EventType.SEND_OFFER, msg);
+  }
+
+  private async acceptAnswer({ data: answer, nickname }: PeerEvent<RTCSessionDescription>) {
+    const peer = this.peerStorage.get(nickname)!;
+
+    await peer.connection.setRemoteDescription(answer);
 
     const msg: PeerEvent<string> = { nickname, data: "" };
-    this.networkListener.dispatch(EventType.SEND_ANSWER_ACK, msg);
     this.networkListener.dispatch(EventType.PEER_CONNECTED, nickname);
+    setTimeout(() => {
+      this.networkListener.dispatch(EventType.SEND_ANSWER_ACK, msg);
+    }, 300);
   }
 
   private async acceptOffer({ data: offer, nickname }: PeerEvent<RTCSessionDescription>) {
@@ -221,6 +210,10 @@ export class PeerManager {
         this.networkListener.dispatch(EventType.PEER_DISCONNECTED, nickname);
         this.peerStorage.delete(nickname);
       }
+    };
+
+    conn.onicecandidateerror = (event: Event) => {
+      console.warn(event as RTCPeerConnectionIceErrorEvent);
     };
   }
 
