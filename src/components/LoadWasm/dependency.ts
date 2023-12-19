@@ -12,9 +12,9 @@ import {
 /* eslint import/no-mutable-exports: 0 */
 
 const mutex = new Mutex();
-const peerStorage = new PeerStorage();
-const dbManager = new DBManager();
 export const networkListener = new NetworkListener();
+const dbManager = new DBManager();
+const peerStorage = new PeerStorage(networkListener);
 let peerManager: PeerManager;
 let socketClient: SocketClient;
 export let networkBrowser: NetworkBrowser;
@@ -28,7 +28,7 @@ export async function initializeNode(nickname: string, token: string | null) {
 
   await createGenesis();
   await socketClient
-    .connect(nickname, { host: "localhost", port: 8000, scheme: "ws", path: "/ws/socket.io" })
+    .connect(nickname, { host: "127.0.0.1", port: 8000, scheme: "ws", path: "/ws/socket.io" })
     .catch(console.error);
   await networkManager.sendOffer();
 }

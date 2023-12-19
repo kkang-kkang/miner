@@ -67,10 +67,16 @@ export class SocketClient {
     this.socket!.on(EventType.OFFER, this.handleOffer.bind(this));
     this.socket!.on(EventType.ANSWER, this.handleAnswer.bind(this));
     this.socket!.on(EventType.ICE, this.handleReceiveIce.bind(this));
+    this.socket!.on(EventType.ANSWER_ACK, this.handleAnswerAck.bind(this));
 
     this.networkListener.attachListener(EventType.TX_CREATED, this.handleTxCreated.bind(this));
     this.networkListener.attachListener(EventType.SEND_ICE, this.handleSendIce.bind(this));
     this.networkListener.attachListener(EventType.SEND_ANSWER, this.sendAnswer.bind(this));
+    this.networkListener.attachListener(EventType.SEND_ANSWER_ACK, this.sendAnswerAck.bind(this));
+  }
+
+  private sendAnswerAck(event: PeerEvent<string>) {
+    this.socket!.emit(EventType.ANSWER_ACK, event);
   }
 
   private sendAnswer(event: PeerEvent<RTCSessionDescription>) {
@@ -79,7 +85,7 @@ export class SocketClient {
   }
 
   private handleSendIce(event: PeerEvent<RTCIceCandidate>) {
-    const msg: PeerEvent<string> = { nickname: event.nickname, data: event.data.candidate };
+    const msg: PeerEvent<string> = { nickname: event.nickname, data: JSON.stringify(event.data) };
     this.socket!.emit(EventType.ICE, msg);
   }
 
@@ -106,13 +112,16 @@ export class SocketClient {
   }
 
   private handleReceiveIce(event: PeerEvent<string>) {
-    const candidate = new RTCIceCandidate({ candidate: event.data });
-
+    const candidate = JSON.parse(event.data) as RTCIceCandidate;
     const msg: PeerEvent<RTCIceCandidate> = {
       data: candidate,
       nickname: event.nickname,
     };
     this.networkListener.dispatch(EventType.RECEIVE_ICE, msg);
+  }
+
+  private handleAnswerAck(event: PeerEvent<string>) {
+    this.networkListener.dispatch(EventType.GOT_ANSWER_ACK, event);
   }
 
   private async handleFindBlock({ data: { hash }, id }: IDEvent<HashPayload>) {

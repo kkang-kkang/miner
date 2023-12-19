@@ -9,8 +9,6 @@ import { PeerInfo } from "../LoadWasm/network";
 import { ChatPayload, EventType, IDEvent, PeerEvent } from "../LoadWasm/network/event";
 import "./App.css";
 
-/* eslint no-console: 0 */
-
 export default function App() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [message, setMessage] = useState<string>("");

@@ -5,6 +5,9 @@ export enum EventType {
   ANSWER = "answer",
   SEND_ANSWER = "send-answer",
   RECEIVE_ANSWER = "receive-answer",
+  ANSWER_ACK = "answer-ack",
+  SEND_ANSWER_ACK = "send-answer-ack",
+  GOT_ANSWER_ACK = "receive-answer-ack",
 
   ICE = "ice",
   SEND_ICE = "send-ice",

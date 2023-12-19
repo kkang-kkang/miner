@@ -1,3 +1,6 @@
+import { NetworkListener } from "../network";
+import { EventType, PeerEvent } from "../network/event";
+
 export enum Channel {
   BROADCAST_TX = "broadcast-tx",
   BROADCAST_BLOCK = "broadcast-block",
@@ -10,12 +13,23 @@ export type Peer = {
   ip: string | null;
   connection: RTCPeerConnection;
   datachannels: Map<Channel, RTCDataChannel>;
+  connected: boolean;
+  iceQueue: RTCIceCandidate[];
 };
 
 export class PeerStorage {
   private readonly peers: Map<string, Peer>;
-  constructor() {
+  constructor(private readonly networkListener: NetworkListener) {
     this.peers = new Map<string, Peer>();
+
+    this.networkListener.attachListener(EventType.PEER_CONNECTED, (nickname: string) => {
+      const peer = this.get(nickname)!;
+      peer.iceQueue.forEach((candidate) => {
+        const event: PeerEvent<RTCIceCandidate> = { data: candidate, nickname };
+        this.networkListener.dispatch(EventType.SEND_ICE, event);
+      });
+      peer.iceQueue = [];
+    });
   }
 
   public iterate(each: (peer: Peer) => void) {
