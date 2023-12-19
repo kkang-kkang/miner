@@ -12,7 +12,7 @@ export class NetworkManager {
     private readonly socketClient: SocketClient,
     private readonly mutex: Mutex,
   ) {
-    this.networkListener.attachListener(EventType.NEW_TX, this.handleNewTx);
+    this.networkListener.attachListener(EventType.NEW_TX, this.handleNewTx.bind(this));
   }
 
   public broadcastChat(msg: string) {

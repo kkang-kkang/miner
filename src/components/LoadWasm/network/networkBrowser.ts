@@ -94,13 +94,15 @@ export class NetworkBrowser {
       location: undefined,
     };
 
-    const nickname = fetch(`https://${1 + 1}/nodes/${peer.nickname}`).then(async (response) => {
-      if (!response.ok) {
-        return "";
-      }
-      const data = await response.json();
-      return (data as { nickname: string }).nickname;
-    });
+    const nickname = fetch(`https://${1 + 1}/nodes/${peer.nickname}`)
+      .then(async (response) => {
+        if (!response.ok) {
+          return "";
+        }
+        const data = await response.json();
+        return (data as { nickname: string }).nickname;
+      })
+      .catch(() => console.error);
 
     if (peer.ip && this.token) {
       const response = await fetch(`https://ipinfo.io/${peer.ip}/json?token=${this.token}`);
@@ -119,7 +121,7 @@ export class NetworkBrowser {
       };
     }
 
-    info.nickname = await nickname;
+    await nickname;
 
     return info;
   }

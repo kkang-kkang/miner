@@ -34,14 +34,15 @@ export class SocketClient {
 
   public connect(
     nickname: string,
-    addr: { scheme: string; host: string; port: number },
+    addr: { scheme: string; host: string; port: number; path: string },
   ): Promise<void> {
     this.nickname = nickname;
-    this.socket = io(`${addr.scheme}://${addr.host}:${addr.port}/socket.io`, {
+    this.socket = io(`${addr.scheme}://${addr.host}:${addr.port}`, {
       transports: ["websocket"],
       auth: {
         nickname: this.nickname,
       },
+      path: addr.path,
     });
     this.registerListeners();
 
@@ -57,19 +58,19 @@ export class SocketClient {
   }
 
   private registerListeners() {
-    this.socket!.on(Request.FIND_BLOCK, this.handleFindBlock);
-    this.socket!.on(Request.FIND_TX, this.handleFindTx);
-    this.socket!.on(Request.GET_BALANCE, this.handleGetBalance);
-    this.socket!.on(Request.LIST_BLOCK, this.handleListBlock);
-    this.socket!.on(Request.NEW_TX, this.handleNewTx);
+    this.socket!.on(Request.FIND_BLOCK, this.handleFindBlock.bind(this));
+    this.socket!.on(Request.FIND_TX, this.handleFindTx.bind(this));
+    this.socket!.on(Request.GET_BALANCE, this.handleGetBalance.bind(this));
+    this.socket!.on(Request.LIST_BLOCK, this.handleListBlock.bind(this));
+    this.socket!.on(Request.NEW_TX, this.handleNewTx.bind(this));
 
-    this.socket!.on(EventType.OFFER, this.handleOffer);
-    this.socket!.on(EventType.ANSWER, this.handleAnswer);
-    this.socket!.on(EventType.ICE, this.handleReceiveIce);
+    this.socket!.on(EventType.OFFER, this.handleOffer.bind(this));
+    this.socket!.on(EventType.ANSWER, this.handleAnswer.bind(this));
+    this.socket!.on(EventType.ICE, this.handleReceiveIce.bind(this));
 
-    this.networkListener.attachListener(EventType.TX_CREATED, this.handleTxCreated);
-    this.networkListener.attachListener(EventType.SEND_ICE, this.handleSendIce);
-    this.networkListener.attachListener(EventType.SEND_ANSWER, this.sendAnswer);
+    this.networkListener.attachListener(EventType.TX_CREATED, this.handleTxCreated.bind(this));
+    this.networkListener.attachListener(EventType.SEND_ICE, this.handleSendIce.bind(this));
+    this.networkListener.attachListener(EventType.SEND_ANSWER, this.sendAnswer.bind(this));
   }
 
   private sendAnswer(event: PeerEvent<RTCSessionDescription>) {
@@ -83,6 +84,8 @@ export class SocketClient {
   }
 
   private handleOffer(event: PeerEvent<string>) {
+    if (event.nickname === this.socket!.id) return;
+
     const sessionDescription = new RTCSessionDescription({ type: "offer", sdp: event.data });
 
     const msg: PeerEvent<RTCSessionDescription> = {

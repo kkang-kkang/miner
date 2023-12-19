@@ -34,9 +34,9 @@ export class PeerManager {
   ) {
     this.initialOffer = undefined;
 
-    this.networkListener.attachListener(EventType.RECEIVE_ICE, this.addIceCandidate);
-    this.networkListener.attachListener(EventType.RECEIVE_OFFER, this.acceptOffer);
-    this.networkListener.attachListener(EventType.RECEIVE_ANSWER, this.acceptAnswer);
+    this.networkListener.attachListener(EventType.RECEIVE_ICE, this.addIceCandidate.bind(this));
+    this.networkListener.attachListener(EventType.RECEIVE_OFFER, this.acceptOffer.bind(this));
+    this.networkListener.attachListener(EventType.RECEIVE_ANSWER, this.acceptAnswer.bind(this));
   }
 
   public broadcastChat(msg: string) {
@@ -136,9 +136,9 @@ export class PeerManager {
   private async acceptOffer({ data: offer, nickname }: PeerEvent<RTCSessionDescription>) {
     const connection = new RTCPeerConnection({ iceServers });
 
+    await connection.setRemoteDescription(offer);
     const answer = await connection.createAnswer();
     await connection.setLocalDescription(answer);
-    await connection.setRemoteDescription(offer);
 
     const datachannels = new Map<Channel, RTCDataChannel>();
 
