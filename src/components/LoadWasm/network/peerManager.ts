@@ -13,6 +13,11 @@ const iceServers: RTCIceServer[] = [
       "stun:stun4.l.google.com:19302",
     ],
   },
+  {
+    urls: ["turn:ec2-13-124-100-186.ap-northeast-2.compute.amazonaws.com:3478"],
+    username: "oneee",
+    credential: "only",
+  },
 ];
 
 type CloneUnit = {
