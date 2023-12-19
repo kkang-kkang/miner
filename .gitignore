@@ -22,5 +22,5 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# WebAssembly build
-public/main.wasm
+# # WebAssembly build
+# public/main.wasm
