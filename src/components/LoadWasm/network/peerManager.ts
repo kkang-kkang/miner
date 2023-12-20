@@ -19,7 +19,6 @@ const iceServers: RTCIceServer[] = [
     credential: "only",
   },
 ];
-console.log(iceServers);
 
 type CloneUnit = {
   kind: ObjectStore;
@@ -107,7 +106,6 @@ export class PeerManager {
   }
 
   private async acceptNewPeer({ nickname }: PeerEvent<string>) {
-    console.log("new peer!!");
     const connection = new RTCPeerConnection({ iceServers });
 
     const datachannels = new Map<Channel, RTCDataChannel>();

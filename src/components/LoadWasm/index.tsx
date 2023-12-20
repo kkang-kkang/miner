@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import "./LoadWasm.css";
 import { CallbackEvent } from "./event";
 
 function loadWasm(): Promise<void> {

@@ -158,13 +158,14 @@ export class SocketClient {
 
     for (let i = 0; i < count; i++) {
       const block = await this.findBlock(head);
-      if (block == null || block.header.curHash === "00") break;
+      if (block == null) break;
       blockSummaries.push({
         curHash: block.header.curHash,
         prevHash: block.header.prevHash,
         timestamp: block.header.timestamp,
-        txCount: block.body.txHashes.length + 1,
+        txCount: block.body.txHashes?.length + 1 || 0,
       });
+      if (block.header.curHash === "00") break;
       head = block.header.prevHash;
     }
 
@@ -187,15 +188,20 @@ export class SocketClient {
   }
 
   private async findBlock(hash: string): Promise<Block | null> {
-    const body = await this.dbManager.get(ObjectStore.BLOCK_BODIES, hash);
-    const header = await this.dbManager.get(ObjectStore.BLOCK_HEADERS, hash);
-    if (header === undefined || body === undefined) {
+    const body = await this.dbManager
+      .get(ObjectStore.BLOCK_BODIES, hash)
+      .then((val) => val as BlockBody);
+
+    const header = await this.dbManager
+      .get(ObjectStore.BLOCK_HEADERS, hash)
+      .then((val) => val as BlockHeader);
+
+    if (header === undefined) return null;
+
+    if (body === undefined && header.curHash !== "00") {
       return null;
     }
 
-    return {
-      body: body as BlockBody,
-      header: header as BlockHeader,
-    };
+    return { body: body ?? {}, header };
   }
 }

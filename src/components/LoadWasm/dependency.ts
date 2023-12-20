@@ -11,6 +11,11 @@ import {
 
 /* eslint import/no-mutable-exports: 0 */
 
+const gateway = {
+  host: "127.0.0.1",
+  port: 8000,
+};
+
 const mutex = new Mutex();
 export const networkListener = new NetworkListener();
 const dbManager = new DBManager();
@@ -28,6 +33,11 @@ export async function initializeNode(nickname: string, token: string | null) {
 
   await createGenesis();
   await socketClient
-    .connect(nickname, { host: "127.0.0.1", port: 8000, scheme: "ws", path: "/ws/socket.io" })
+    .connect(nickname, {
+      host: gateway.host,
+      port: gateway.port,
+      scheme: "ws",
+      path: "/ws/socket.io",
+    })
     .catch(console.error);
 }

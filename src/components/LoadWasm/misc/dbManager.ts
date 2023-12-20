@@ -70,7 +70,7 @@ export class DBManager {
     return new Promise((resolve) => {
       this.withTx(objStore, "readonly", (tx: IDBTransaction) => {
         const storage = tx.objectStore(objStore);
-        const req = storage.getKey(key);
+        const req = storage.get(key);
 
         req.onsuccess = () => {
           const val = req.result;
