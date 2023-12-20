@@ -79,7 +79,7 @@ func FindUTxOutputs(ctx context.Context, pubKey []byte) (_ []*tx.UTxOutput, got 
 		blockBodyStorage, _ := tranx.ObjectStore(ObjStoreBlockBody)
 
 		for {
-			req, _ := blockHeaderStorage.GetKey(js.ValueOf(util.BytesToStr(cur.ToHex())))
+			req, _ := blockHeaderStorage.Get(js.ValueOf(util.BytesToStr(cur.ToHex())))
 			val, err := req.Await(ctx)
 			if err != nil {
 				return errors.Wrap(err, "request failed")
@@ -94,7 +94,7 @@ func FindUTxOutputs(ctx context.Context, pubKey []byte) (_ []*tx.UTxOutput, got 
 				return nil
 			}
 
-			req, _ = blockBodyStorage.GetKey(js.ValueOf(util.BytesToStr(header.CurHash.ToHex())))
+			req, _ = blockBodyStorage.Get(js.ValueOf(util.BytesToStr(header.CurHash.ToHex())))
 			val, err = req.Await(ctx)
 			if err != nil {
 				return errors.Wrap(err, "request failed")
