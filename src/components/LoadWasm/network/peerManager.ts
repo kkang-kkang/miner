@@ -1,4 +1,6 @@
 import { Mutex } from "async-mutex";
+import { networkBrowser } from "../dependency";
+import { getHeadHash, setHeadHash } from "../event/dispatchers";
 import { Channel, DBManager, ObjectStore, PeerStorage } from "../misc";
 import { ChatPayload, EventType, IDEvent, PeerEvent } from "./event";
 import { NetworkListener } from "./networkListener";
@@ -47,17 +49,16 @@ export class PeerManager {
       const channel = peer.datachannels.get(Channel.OPEN_CHAT)!;
       channel.send(msg);
     });
+    const payload: PeerEvent<ChatPayload> = {
+      data: { data: msg, timestamp: new Date() },
+      nickname: "You",
+    };
+    this.networkListener.dispatch(EventType.CHAT, payload);
   }
 
-  public sendChat(nickname: string, msg: string) {
-    const peer = this.peerStorage.get(nickname);
-    if (peer === undefined) return;
+  public async cloneBlockchain(): Promise<void> {
+    await this.dbManager.clearAll();
 
-    const channel = peer.datachannels.get(Channel.OPEN_CHAT)!;
-    channel.send(msg);
-  }
-
-  public cloneBlockchain(): Promise<void> {
     const arr = this.peerStorage.all();
     const peer = arr[Math.floor(Math.random() * arr.length)];
 
@@ -77,9 +78,13 @@ export class PeerManager {
           await this.cloneBlockchain();
           return resolve();
         }
+        if (event.data.startsWith("head:")) {
+          const head = event.data.replace("head:", "");
+          setHeadHash(head);
+          return;
+        }
 
         const { data, kind: storage } = JSON.parse(event.data) as CloneUnit;
-        if (data.key === "00") return;
         await this.dbManager.insert(storage, data.key, data.value);
       };
     });
@@ -186,6 +191,7 @@ export class PeerManager {
     const peer = this.peerStorage.get(event.nickname)!;
     peer.connection.addIceCandidate(event.data).then(() => {
       peer.ip = event.data.address;
+      this.peerStorage.put(peer);
     });
   }
 
@@ -203,8 +209,7 @@ export class PeerManager {
     };
 
     conn.onconnectionstatechange = () => {
-      console.log(conn.connectionState);
-      if (conn.connectionState === "closed") {
+      if (conn.connectionState === "disconnected") {
         this.networkListener.dispatch(EventType.PEER_DISCONNECTED, nickname);
         this.peerStorage.delete(nickname);
       }
@@ -270,10 +275,10 @@ export class PeerManager {
   }
 
   private handleOpenChat(nickname: string, _: RTCDataChannel) {
-    return (event: MessageEvent<string>) => {
+    return async (event: MessageEvent<string>) => {
       const payload: PeerEvent<ChatPayload> = {
         data: { data: event.data, timestamp: new Date() },
-        nickname,
+        nickname: await networkBrowser.fetchNickname(nickname),
       };
       this.networkListener.dispatch(EventType.CHAT, payload);
     };
@@ -303,6 +308,9 @@ export class PeerManager {
         channel.send(JSON.stringify(unit));
       });
     };
+
+    const head = await getHeadHash();
+    channel.send(`head:${head}`);
 
     await Promise.all([
       transfer(ObjectStore.BLOCK_BODIES),

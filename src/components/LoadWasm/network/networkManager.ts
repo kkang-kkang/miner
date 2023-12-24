@@ -17,10 +17,6 @@ export class NetworkManager {
     this.peerManager.broadcastChat(msg);
   }
 
-  public sendChat(nickname: string, msg: string) {
-    this.peerManager.sendChat(nickname, msg);
-  }
-
   public broadcastNewBlock(block: Block) {
     this.mutex.runExclusive(() => {
       this.peerManager.broadcastBlock(block);
@@ -29,7 +25,7 @@ export class NetworkManager {
   }
 
   public cloneBlockchain() {
-    this.mutex.runExclusive(async () => {
+    return this.mutex.runExclusive(async () => {
       await this.peerManager.cloneBlockchain();
     });
   }

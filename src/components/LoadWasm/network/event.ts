@@ -16,6 +16,7 @@ export enum EventType {
   SEND_ICE = "send-ice",
   RECEIVE_ICE = "receive-ice",
 
+  CREATING_BLOCK = "creating-block",
   BLOCK_CREATED = "block-created",
   TX_CREATED = "tx-created",
   NEW_TX = "new-tx",

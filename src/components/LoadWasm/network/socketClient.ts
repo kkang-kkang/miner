@@ -32,6 +32,10 @@ export class SocketClient {
     this.dbManager = dbManager;
   }
 
+  public getSid(): string {
+    return this.socket!.id;
+  }
+
   public connect(
     nickname: string,
     addr: { scheme: string; host: string; port: number; path: string },

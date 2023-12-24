@@ -11,9 +11,11 @@ import {
 
 /* eslint import/no-mutable-exports: 0 */
 
-const gateway = {
-  host: "127.0.0.1",
-  port: 8000,
+export const gateway = {
+  host: "ec2-52-79-78-208.ap-northeast-2.compute.amazonaws.com",
+  port: 80,
+  // host: "127.0.0.1",
+  // port: 8000,
 };
 
 const mutex = new Mutex();
@@ -27,7 +29,7 @@ export let networkManager: NetworkManager;
 
 export async function initializeNode(nickname: string, token: string | null) {
   socketClient = new SocketClient(networkListener, dbManager);
-  networkBrowser = new NetworkBrowser(dbManager, peerStorage, token);
+  networkBrowser = new NetworkBrowser(dbManager, peerStorage, socketClient, token);
   peerManager = new PeerManager(mutex, dbManager, peerStorage, networkListener);
   networkManager = new NetworkManager(networkListener, peerManager, mutex);
 

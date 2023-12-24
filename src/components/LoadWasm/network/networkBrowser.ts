@@ -1,5 +1,7 @@
+import { gateway } from "../dependency";
 import { DBManager, ObjectStore } from "../misc";
 import { Peer, PeerStorage } from "../misc/peerStorage";
+import { SocketClient } from "./socketClient";
 
 type IPInfo = {
   ip: string;
@@ -35,9 +37,14 @@ export class NetworkBrowser {
   constructor(
     private readonly dbManager: DBManager,
     private readonly peerStorage: PeerStorage,
+    private readonly socketClient: SocketClient,
     token: string | null,
   ) {
     this.token = token;
+  }
+
+  public fetchSid(): string {
+    return this.socketClient.getSid();
   }
 
   public async fetchMempool(): Promise<Transaction[]> {
@@ -61,7 +68,7 @@ export class NetworkBrowser {
   public async fetchBlock(hash: string): Promise<Block | null> {
     const body = await this.dbManager.get(ObjectStore.BLOCK_BODIES, hash);
     const header = await this.dbManager.get(ObjectStore.BLOCK_HEADERS, hash);
-    if (header === undefined || body === undefined) {
+    if (header === undefined && body === undefined) {
       return null;
     }
 
@@ -87,14 +94,13 @@ export class NetworkBrowser {
   }
 
   public async fetchNickname(sid: string): Promise<string> {
-    return await sid;
-    // const response = await fetch(`https://${gateway.host}:${gateway.port}/nodes/${sid}`);
+    const response = await fetch(`http://${gateway.host}:${gateway.port}/nodes/${sid}`);
 
-    // if (!response.ok) {
-    //   return "";
-    // }
-    // const data = await response.json();
-    // return (data as { nickname: string }).nickname;
+    if (!response.ok) {
+      return "";
+    }
+    const data = await response.json();
+    return (data as { nickname: string }).nickname;
   }
 
   private async fetchPeerInfo(peer: Peer): Promise<PeerInfo> {
@@ -105,7 +111,10 @@ export class NetworkBrowser {
       location: undefined,
     };
 
-    const nickname = this.fetchNickname(peer.nickname).catch(() => console.error);
+    const nickname = this.fetchNickname(peer.nickname).catch((e) => {
+      console.error(e);
+      return "";
+    });
 
     if (peer.ip && this.token) {
       const response = await fetch(`https://ipinfo.io/${peer.ip}/json?token=${this.token}`);
@@ -124,7 +133,7 @@ export class NetworkBrowser {
       };
     }
 
-    await nickname;
+    info.nickname = await nickname;
 
     return info;
   }
