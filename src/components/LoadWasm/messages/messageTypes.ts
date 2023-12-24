@@ -9,6 +9,8 @@ export class Message<T> {
 }
 
 export enum MessageTypes {
+  ERROR = "error",
+
   CREATE_TX = "createTx",
   TX_CREATED = "txCreated",
   INSERT_TX = "insertTx",
@@ -28,6 +30,9 @@ export enum MessageTypes {
 
   GET_HEAD_HASH = "getHeadHash",
   GOT_HEAD_HASH = "gotHeadHash",
+
+  SET_HEAD_HASH = "setHeadHash",
+  HEAD_HASH_CHANGED = "headHashChanged",
 
   GET_BALANCE = "getBalance",
   GOT_BALANCE = "gotBalance",

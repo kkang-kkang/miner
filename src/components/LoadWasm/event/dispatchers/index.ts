@@ -1,3 +1,4 @@
+export * from "./attachWasmErrorListener";
 export * from "./createBlock";
 export * from "./createGenesis";
 export * from "./createKeyPair";
@@ -6,4 +7,5 @@ export * from "./getBalance";
 export * from "./getHeadHash";
 export * from "./insertBroadcastedBlock";
 export * from "./insertBroadcastedTx";
+export * from "./setHeadHash";
 export * from "./setMinerAddress";

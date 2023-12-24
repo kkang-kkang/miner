@@ -87,6 +87,22 @@ export class DBManager {
     });
   }
 
+  public async clearAll() {
+    await Promise.all([
+      this.clear(ObjectStore.TRANSACTION),
+      this.clear(ObjectStore.BLOCK_BODIES),
+      this.clear(ObjectStore.BLOCK_HEADERS),
+      this.clear(ObjectStore.MEMPOOL),
+    ]);
+  }
+
+  private clear(objStore: ObjectStore) {
+    return this.withTx(objStore, "readwrite", (tx: IDBTransaction) => {
+      const objectStore = tx.objectStore(objStore);
+      objectStore.clear();
+    });
+  }
+
   private async withTx(
     objStore: ObjectStore,
     mode: IDBTransactionMode,
