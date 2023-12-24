@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/gob"
+	"time"
 
 	"github.com/cbergoon/merkletree"
 	"github.com/pkg/errors"
@@ -48,9 +49,10 @@ type UTxOutput struct {
 
 // Transactions is data of the blockchain.
 type Transaction struct {
-	Hash    hash.Hash   `json:"hash"`
-	Inputs  []*TxInput  `json:"inputs"`
-	Outputs []*TxOutput `json:"outputs"`
+	Hash      hash.Hash   `json:"hash"`
+	CreatedAt time.Time   `json:"createdAt"`
+	Inputs    []*TxInput  `json:"inputs"`
+	Outputs   []*TxOutput `json:"outputs"`
 }
 
 func New(uTxOuts []*UTxOutput, amount uint64, privKey *ecdsa.PrivateKey, srcAddr []byte, dstAddr []byte) (*Transaction, error) {
@@ -82,6 +84,7 @@ func New(uTxOuts []*UTxOutput, amount uint64, privKey *ecdsa.PrivateKey, srcAddr
 	srcOut := &TxOutput{Addr: srcAddr, Amount: sum - amount}
 
 	tx.Outputs = append(tx.Outputs, dstOut, srcOut)
+	tx.CreatedAt = time.Now()
 
 	hash, err := tx.MakeHash()
 	if err != nil {
@@ -108,11 +111,17 @@ func (tx *Transaction) MakeHash() ([]byte, error) {
 	}
 
 	hash.Write(buf.Bytes())
-
 	buf.Reset()
 
 	if err := enc.Encode(tx.Outputs); err != nil {
 		return nil, errors.Wrap(err, "failed to encode tx outputs")
+	}
+
+	hash.Write(buf.Bytes())
+	buf.Reset()
+
+	if err := enc.Encode(tx.CreatedAt); err != nil {
+		return nil, errors.Wrap(err, "failed to encode createdAt")
 	}
 
 	hash.Write(buf.Bytes())

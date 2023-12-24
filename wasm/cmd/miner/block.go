@@ -197,9 +197,11 @@ func deleteUsedTxOutputs(ctx context.Context, block *block.Block) error {
 
 	for _, tx := range block.Body.Txs {
 		for _, in := range tx.Inputs {
-			hash := in.TxHash.ToHex()
+			if bytes.Equal(in.TxHash, []byte{0x00}) {
+				continue
+			}
 
-			targetTx, err := storage.FindTx(ctx, hash)
+			targetTx, err := storage.FindTx(ctx, in.TxHash)
 			if err != nil {
 				return errors.Wrap(err, "failed to find transaction to classify")
 			}
@@ -208,7 +210,7 @@ func deleteUsedTxOutputs(ctx context.Context, block *block.Block) error {
 
 			// check if all the tx outputs are used.
 			if empty := checkTxEmpty(targetTx); empty {
-				deletable = append(deletable, hash)
+				deletable = append(deletable, in.TxHash)
 				continue
 			}
 			updatable = append(updatable, targetTx)

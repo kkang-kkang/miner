@@ -142,7 +142,6 @@ func FindNonceUsingGPU(ctx context.Context, data []byte, difficulty uint8) (_ ch
 
 			mapBuffer(tmpBuf, wasmgpu.GPUMapModeFlagsRead, 4, func(arr js.Value) {
 				nonce := uint32(arr.Index(0).Int())
-
 				if nonce != 0 {
 					result <- nonce
 				}

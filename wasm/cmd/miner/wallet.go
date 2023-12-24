@@ -50,6 +50,16 @@ func getHeadHash() any {
 	})
 }
 
+func setHeadHash() any {
+	return js.FuncOf(func(this js.Value, args []js.Value) any {
+		return promise.New(promise.NewHandler(func(resolve, reject js.Value) any {
+			b, _ := util.DecodeHex(util.StrToBytes(args[0].String()))
+			blockchain.HeadHash = b
+			return resolve.Invoke()
+		}))
+	})
+}
+
 func getBalance() any {
 	return js.FuncOf(func(this js.Value, args []js.Value) any {
 		return promise.New(promise.NewHandler(func(resolve, reject js.Value) any {

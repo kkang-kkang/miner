@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 
 	"miner/internal/block"
+	"miner/internal/blockchain"
 	"miner/internal/misc/util"
 )
 
@@ -60,4 +61,8 @@ func InsertBlockHeader(ctx context.Context, header *block.Header) error {
 
 		return nil
 	}, ObjStoreBlockHeader)
+}
+
+func FindBlockchainHead() []byte {
+	return blockchain.GenesisHash()
 }

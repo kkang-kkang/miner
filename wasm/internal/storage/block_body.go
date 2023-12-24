@@ -107,10 +107,14 @@ func FindUTxOutputs(ctx context.Context, pubKey []byte) (_ []*tx.UTxOutput, got 
 
 			var transaction tx.Transaction
 			for _, txHash := range append(body.TxHashes, body.CoinbaseTxHash) {
-				req, _ = txStorage.GetKey(js.ValueOf(util.BytesToStr(txHash.ToHex())))
+				req, _ = txStorage.Get(js.ValueOf(util.BytesToStr(txHash.ToHex())))
 				val, err = req.Await(ctx)
 				if err != nil {
 					return errors.Wrap(err, "request failed")
+				}
+
+				if val.IsUndefined() {
+					continue
 				}
 
 				if err := json.Unmarshal(util.FromJSObject(val), &transaction); err != nil {
@@ -127,9 +131,9 @@ func FindUTxOutputs(ctx context.Context, pubKey []byte) (_ []*tx.UTxOutput, got 
 
 						got += out.Amount
 					}
-					if idx == 1 {
-						return nil
-					}
+					// if idx == 1 {
+					// 	return nil
+					// }
 				}
 			}
 

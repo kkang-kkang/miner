@@ -43,13 +43,14 @@ type Block struct {
 // You still have to configure [nonce, hash].
 func New(minerAddr []byte, txs []*tx.Transaction, prevHash []byte, difficulty uint8) (*Block, error) {
 	coinBaseTx := &tx.Transaction{
+		CreatedAt: time.Now(),
 		Inputs: []*tx.TxInput{{
 			TxHash: tx.COINBASE,
 			OutIdx: 0,
 		}},
 		Outputs: []*tx.TxOutput{{
 			Addr:   minerAddr,
-			Amount: blockchain.MiningPrize * uint64(len(txs)), // TODO: change this to actual algorithm.
+			Amount: blockchain.MiningPrize * uint64(len(txs)),
 		}},
 	}
 

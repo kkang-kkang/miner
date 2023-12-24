@@ -58,10 +58,20 @@ func InsertTxs(ctx context.Context, txs []*tx.Transaction) error {
 				return errors.Wrap(err, "failed to marshal transaction")
 			}
 
-			objStore.AddKey(
+			js.Global().Get("console").Call("log", util.BytesToStr(b))
+
+			req, err := objStore.AddKey(
 				js.ValueOf(util.BytesToStr(tx.Hash.ToHex())),
 				util.ToJSObject(b),
 			)
+
+			if err != nil {
+				return err
+			}
+
+			if err := req.Await(ctx); err != nil {
+				return err
+			}
 		}
 
 		return nil
@@ -77,7 +87,7 @@ func DeleteTxs(ctx context.Context, txHashes [][]byte) error {
 		}
 
 		for _, hash := range txHashes {
-			objStore.Delete(js.ValueOf(util.BytesToStr(hash)))
+			objStore.Delete(js.ValueOf(util.BytesToStr(util.EncodeHex(hash))))
 		}
 
 		return nil

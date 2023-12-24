@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"syscall/js"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -43,6 +44,7 @@ func createNewTx() any {
 			var tranx *tx.Transaction
 			if sig, isAdmin := compareAdmin(privKey); isAdmin {
 				tranx = &tx.Transaction{
+					CreatedAt: time.Now(),
 					Inputs: []*tx.TxInput{{
 						TxHash:    []byte{0x00},
 						OutIdx:    0,
@@ -139,7 +141,7 @@ func validateTx(ctx context.Context, transaction *tx.Transaction) (isCoinbase bo
 
 		out := tx.Outputs[in.OutIdx]
 
-		publicKey, err := key.ParseECDSAPublicKey(out.Addr)
+		publicKey, err := key.ParseECDSAPublicKey(out.Addr.ToHex())
 		if err != nil {
 			return false, errors.Wrap(err, "failed to parse ecdsa public key")
 		}

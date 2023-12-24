@@ -13,8 +13,7 @@ const (
 )
 
 var (
-	HeadHash = GenesisHash()
-
+	HeadHash  []byte
 	MinerAddr []byte
 )
 

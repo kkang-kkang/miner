@@ -12,7 +12,7 @@ fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
 
   var nonce : u32 = start + (global_id.x + (global_id.y * 8)) * CORE_BATCH_SIZE;
   
-  var inputCopy : array<u32, 57>;
+  var inputCopy : array<u32, 100>;
   for (var i : u32 = 0; i < u32(arrayLength(&inputData)); i++) {
     inputCopy[i] = inputData[i];
   }
@@ -131,7 +131,7 @@ fn sha256_transform(ctx : ptr<function, SHA256_CTX>)
 }
 
 
-fn sha256_update(ctx : ptr<function, SHA256_CTX>, input : array<u32, 57>,len : u32)
+fn sha256_update(ctx : ptr<function, SHA256_CTX>, input : array<u32, 100>,len : u32)
 {
   for (var i :u32 = 0; i < len; i++) {
     (*ctx).data[(*ctx).datalen] = input[i];
@@ -203,7 +203,7 @@ fn sha256_final(ctx : ptr<function, SHA256_CTX>, hash:  ptr<function, array<u32,
   }
 }
 
-fn sha256(input : array<u32, 57>) -> array<u32, SHA256_BLOCK_SIZE> {
+fn sha256(input : array<u32, 100>) -> array<u32, SHA256_BLOCK_SIZE> {
   var ctx : SHA256_CTX;
   var buf : array<u32, SHA256_BLOCK_SIZE>;
 
