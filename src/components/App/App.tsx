@@ -1,142 +1,51 @@
+import { Box, Text, useToast } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
-import {
-  initializeNode,
-  networkBrowser,
-  networkListener,
-  networkManager,
-} from "../LoadWasm/dependency";
-import { PeerInfo } from "../LoadWasm/network";
-import { ChatPayload, EventType, IDEvent, PeerEvent } from "../LoadWasm/network/event";
+import Info from "../Info/Info";
+import { initializeNode, networkListener } from "../LoadWasm/dependency";
+import { setMinerAddress } from "../LoadWasm/event/dispatchers";
+import { EventType, IDEvent } from "../LoadWasm/network/event";
+import { Terminale } from "../Terminal/Terminal";
 import "./App.css";
 
-export default function App() {
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [message, setMessage] = useState<string>("");
-  const [peers, setPeers] = useState<PeerInfo[]>([]);
-  const [mempoolTxs, setMempoolTxs] = useState<Transaction[]>([]);
+export default function App(props: { nickname: string; addr: string; token: string }) {
+  const [canProceed, setCanProceed] = useState<boolean>(false);
+
+  const toast = useToast({ isClosable: true, position: "top", duration: 3000 });
 
   useEffect(() => {
-    let nickname: string | null;
-    do {
-      nickname = prompt("nickname");
-    } while (nickname == null || nickname === "");
+    setMinerAddress(props.addr);
+    initializeNode(props.nickname, props.token).then(() => setCanProceed(true));
 
-    initializeNode(nickname, prompt("token")).then(() => {
-      networkListener.attachListener(EventType.PEER_CONNECTED, (nickname: string) => {
-        console.log(nickname, "connected");
-        networkBrowser.fetchPeer(nickname).then((peer) => {
-          setPeers([...peers, peer]);
-        });
+    networkListener.attachListener(EventType.TX_CREATED, (event: IDEvent<Transaction>) => {
+      toast({
+        status: "info",
+        title: "Transaction Added",
+        description: (
+          <Text textOverflow={"ellipsis"} overflow={"hidden"} whiteSpace={"nowrap"}>
+            Hash: {event.data.hash}
+          </Text>
+        ),
       });
-
-      networkListener.attachListener(EventType.PEER_DISCONNECTED, (nickname: string) => {
-        console.log(nickname, "disconnected");
-        setPeers(peers.filter((peer) => peer.sid !== nickname));
+    });
+    networkListener.attachListener(EventType.BLOCK_CREATED, (block: Block) => {
+      toast({
+        status: "success",
+        title: "Block Added",
+        description: (
+          <Text textOverflow={"ellipsis"} overflow={"hidden"} whiteSpace={"nowrap"}>
+            Hash: {block.header.curHash}
+          </Text>
+        ),
       });
-
-      networkListener.attachListener(EventType.SEND_BLOCKCHAIN, () => {
-        console.log("sending blockchain");
-      });
-
-      networkListener.attachListener(EventType.RECEIVE_BLOCKCHAIN, () => {
-        console.log("receiving blockchain");
-      });
-
-      networkListener.attachListener(EventType.CHAT, (event: PeerEvent<ChatPayload>) => {
-        const {
-          nickname,
-          data: { data, timestamp },
-        } = event;
-        console.log(timestamp.toISOString(), `${nickname}: ${data}`);
-      });
-
-      networkListener.attachListener(EventType.NEW_TX, (event: IDEvent<TxCandidate>) => {
-        const { data: tx, id } = event;
-        console.log(`new tx requested: ${id}`, tx);
-      });
-
-      networkListener.attachListener(EventType.TX_CREATED, (event: IDEvent<Transaction>) => {
-        const { data: tx, id } = event;
-        console.log(`new tx created: ${id}`, tx);
-        networkBrowser.fetchMempool().then(setMempoolTxs);
-      });
-
-      networkListener.attachListener(EventType.BLOCK_CREATED, (block: Block) => {
-        console.log("new block", block);
-        networkBrowser.fetchMempool().then(setMempoolTxs);
-      });
-      setIsLoading(false);
     });
   }, []);
 
-  return isLoading ? (
-    <div>loading...</div>
-  ) : (
-    <div className="App">
-      <input
-        placeholder=""
-        onChange={(event) => {
-          setMessage(event.target.value);
-        }}
-      ></input>
-      <button
-        onClick={() => {
-          networkManager.broadcastChat(message);
-        }}
-      >
-        hi submit your message
-      </button>
-      <div>
-        <button
-          onClick={() => {
-            networkManager.cloneBlockchain();
-          }}
-        >
-          clone blockchain
-        </button>
-      </div>
-      <div>
-        <div>
-          <div>
-            haha peers i guess
-            <div />
-            {peers.map((peer) => (
-              <>
-                <span>{peer.ip} </span>
-                <span>{peer.location?.city}</span>
-                <span>{peer.nickname} </span>
-                <span>{peer.sid}</span>
-              </>
-            ))}
-          </div>
-          <div>
-            mempool txs i guess
-            <div />
-            {mempoolTxs.map((tx) => (
-              <>
-                <span>{tx.hash}</span>
-                <div>
-                  {tx.inputs.map((input) => (
-                    <>
-                      <span>{input.outIdx}</span>
-                      <span>{input.sig}</span>
-                      <span>{input.txHash}</span>
-                    </>
-                  ))}
-                </div>
-                <div>
-                  {tx.outputs.map((output) => (
-                    <>
-                      <span>{output.addr}</span>
-                      <span>{output.amount}</span>
-                    </>
-                  ))}
-                </div>
-              </>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
+  return (
+    <>
+      <Box width={"100%"} height={"100%"} display={"flex"} justifyContent={"space-between"} p={5}>
+        <Terminale canProceed={canProceed} />
+        <Info canProceed={canProceed} addr={props.addr} nickname={props.nickname} />
+      </Box>
+    </>
   );
 }
