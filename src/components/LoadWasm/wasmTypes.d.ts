@@ -22,6 +22,7 @@ declare global {
 
   export type Transaction = {
     hash: string;
+    createdAt: string;
     inputs: TxIn[];
     outputs: TxOut[];
   };
@@ -62,6 +63,7 @@ declare global {
     createKeyPair: () => Promise<KeyPair>;
     setMinerAddress: (addr: string) => Promise<void>;
     getHeadHash: () => Promise<string>;
+    setHeadHash: (head: string) => Promise<void>;
     getBalance: (addr: string) => Promise<number>;
 
     getDevice: () => any;
