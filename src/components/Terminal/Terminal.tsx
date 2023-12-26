@@ -61,6 +61,24 @@ export function Terminale(props: { canProceed: boolean }) {
   }, [isCreating]);
 
   useEffect(() => {
+    const listenNodeEvent = (event: EventType, f: (nickname: string) => string) => {
+      networkListener.attachListener(event, async (msg: PeerEvent<unknown>) => {
+        const nickname = await networkBrowser.fetchNickname(msg.nickname);
+        pushLine(<TerminalOutput>{f(nickname || "<anonymous>")}</TerminalOutput>);
+      });
+    };
+
+    listenNodeEvent(EventType.SEND_OFFER, (name: string) => `sending offer to: ${name}`);
+    listenNodeEvent(EventType.SEND_ANSWER, (name: string) => `sending answer to: ${name}`);
+    listenNodeEvent(EventType.SEND_ICE, (name: string) => `sending ICE candidate to: ${name}`);
+    listenNodeEvent(EventType.SEND_ANSWER_ACK, (name: string) => `sending answer ack to: ${name}`);
+    listenNodeEvent(EventType.RECEIVE_OFFER, (name: string) => `offer received from: ${name}`);
+    listenNodeEvent(EventType.RECEIVE_ANSWER, (name: string) => `answer received from: ${name}`);
+    listenNodeEvent(
+      EventType.RECEIVE_ICE,
+      (name: string) => `ICE candidate received from: ${name}`,
+    );
+
     networkListener.attachListener(EventType.SEND_BLOCKCHAIN, () => {
       pushLine(<TerminalOutput>cloning blockchain to another node...</TerminalOutput>);
     });
@@ -69,14 +87,16 @@ export function Terminale(props: { canProceed: boolean }) {
     });
     networkListener.attachListener(EventType.PEER_CONNECTED, async (sid: string) => {
       const nickname = await networkBrowser.fetchNickname(sid);
-      pushLine(
-        <TerminalOutput>{`connection to '${
-          nickname ?? "<anonymous>"
-        }' established`}</TerminalOutput>,
-      );
+      pushLine(<TerminalOutput>{`signalling to ${nickname} complete`}</TerminalOutput>);
     });
     networkListener.attachListener(EventType.PEER_DISCONNECTED, (_: string) => {
       pushLine(<TerminalOutput>{`peer disconnected`}</TerminalOutput>);
+    });
+    networkListener.attachListener(EventType.ICE_DONE, async (sid: string) => {
+      const nickname = await networkBrowser.fetchNickname(sid);
+      pushLine(
+        <TerminalOutput>{`ICE candidate exchangement with ${nickname} successfully done`}</TerminalOutput>,
+      );
     });
     networkListener.attachListener(EventType.NEW_TX, (event: IDEvent<TxCandidate>) => {
       pushLine(<TerminalOutput>{`new tx requested: request-id=${event.id}`}</TerminalOutput>);

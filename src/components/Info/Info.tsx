@@ -25,7 +25,7 @@ export default function Info(props: { canProceed: boolean; nickname: string; add
   const [sid, setSid] = useState<string>("");
 
   useEffect(() => {
-    networkListener.attachListener(EventType.PEER_CONNECTED, (sid: string) => {
+    networkListener.attachListener(EventType.ICE_DONE, (sid: string) => {
       networkBrowser.fetchPeer(sid).then((peer) => {
         setPeers((peers) => [...peers, peer]);
       });
@@ -82,7 +82,7 @@ export default function Info(props: { canProceed: boolean; nickname: string; add
                   overflow={"hidden"}
                   whiteSpace={"nowrap"}
                 >
-                  {props.nickname ? props.nickname : "<anonymous>"}
+                  {props.nickname || "<anonymous>"}
                 </StatNumber>
                 <StatHelpText
                   fontSize={"12px"}

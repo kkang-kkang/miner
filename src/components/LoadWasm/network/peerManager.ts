@@ -209,9 +209,13 @@ export class PeerManager {
     };
 
     conn.onconnectionstatechange = () => {
-      if (conn.connectionState === "disconnected") {
-        this.networkListener.dispatch(EventType.PEER_DISCONNECTED, nickname);
-        this.peerStorage.delete(nickname);
+      switch (conn.connectionState) {
+        case "connected":
+          this.networkListener.dispatch(EventType.ICE_DONE, nickname);
+          break;
+        case "disconnected":
+          this.networkListener.dispatch(EventType.PEER_DISCONNECTED, nickname);
+          this.peerStorage.delete(nickname);
       }
     };
 
