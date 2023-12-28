@@ -12,10 +12,8 @@ import {
 /* eslint import/no-mutable-exports: 0 */
 
 export const gateway = {
-  host: "ec2-52-79-78-208.ap-northeast-2.compute.amazonaws.com",
-  port: 80,
-  // host: "127.0.0.1",
-  // port: 8000,
+  host: "kkangkkang.store",
+  port: 443,
 };
 
 const mutex = new Mutex();
@@ -38,7 +36,7 @@ export async function initializeNode(nickname: string, token: string | null) {
     .connect(nickname, {
       host: gateway.host,
       port: gateway.port,
-      scheme: "ws",
+      scheme: "wss",
       path: "/ws/socket.io",
     })
     .catch(console.error);
