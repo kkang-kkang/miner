@@ -70,6 +70,12 @@ func FindBlockchainHead() ([]byte, error) {
 				delete(refMap, ref)
 				continue
 			}
+		}
+
+		if len(refMap) != 1 {
+			return errors.New("finding hash did not successfully finish")
+		}
+		for cur := range refMap {
 			hash, _ = util.DecodeHex(util.StrToBytes(cur))
 		}
 

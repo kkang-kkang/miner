@@ -95,7 +95,13 @@ export default function Monitor(props: { canProceed: boolean; isCloning: boolean
 
   return (
     <>
-      <Button onClick={txOnOpen} isDisabled={!props.canProceed || props.isCloning}>
+      <Button
+        onClick={() => {
+          txOnOpen();
+          setCandidates(new Map<string, Transaction>());
+        }}
+        isDisabled={!props.canProceed || props.isCloning}
+      >
         browse mempool
       </Button>
       <Button onClick={blockOnOpen} isDisabled={!props.canProceed || props.isCloning}>
@@ -131,7 +137,6 @@ export default function Monitor(props: { canProceed: boolean; isCloning: boolean
                         select tx
                       </Text>
                       <Switch
-                        isChecked={candidates.get(tx.hash) !== undefined}
                         onChange={(e) => {
                           if (e.target.checked) {
                             setCandidates((candidates) => candidates.set(tx.hash, tx));
@@ -174,18 +179,17 @@ export default function Monitor(props: { canProceed: boolean; isCloning: boolean
         <DrawerOverlay />
         <DrawerContent fontFamily={"monospace"} bg={"#252A33"}>
           <DrawerHeader color={"white"}>Browse Blocks</DrawerHeader>
-          <DrawerBody>
-            <Stack
-              overflow={"scroll"}
-              onScroll={(event) => {
-                const element = event.target as HTMLElement;
-                if (element.scrollHeight - element.scrollTop === element.clientHeight) {
-                  if (isBlockLoading || !hasNextPage) {
-                    appendMoreBlock();
-                  }
+          <DrawerBody
+            onScroll={(event) => {
+              const element = event.target as HTMLElement;
+              if (element.scrollHeight - element.scrollTop <= element.clientHeight + 1) {
+                if (!isBlockLoading && hasNextPage) {
+                  appendMoreBlock();
                 }
-              }}
-            >
+              }
+            }}
+          >
+            <Stack>
               <Box display={"flex"} flexDir={"column"} alignItems={"center"} width={"100%"}>
                 {blocks.map((block) => (
                   <>
