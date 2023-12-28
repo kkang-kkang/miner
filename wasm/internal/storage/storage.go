@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"errors"
+	"syscall/js"
 
 	"github.com/hack-pad/go-indexeddb/idb"
 	errs "github.com/pkg/errors"
@@ -67,4 +68,20 @@ func withTx(mode idb.TransactionMode, f func(tranx *idb.Transaction) error, objS
 	}
 
 	return tranx.Commit()
+}
+
+func iterate(ctx context.Context, objStore *idb.ObjectStore, each func(key, val js.Value) (bool, error)) error {
+	req, _ := objStore.OpenCursor(idb.CursorNext)
+
+	return req.Iter(ctx, func(cur *idb.CursorWithValue) error {
+		key, _ := cur.Key()
+		val, _ := cur.Value()
+
+		doContinue, err := each(key, val)
+		if !doContinue || err != nil {
+			return err
+		}
+
+		return cur.Continue()
+	})
 }

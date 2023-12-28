@@ -12,7 +12,11 @@ func main() {
 		panic(err)
 	}
 
-	blockchain.HeadHash = storage.FindBlockchainHead()
+	hash, err := storage.FindBlockchainHead()
+	if err != nil {
+		panic(err)
+	}
+	blockchain.HeadHash = hash
 
 	js.Global().Set("createNewTx", createNewTx())
 	js.Global().Set("createBlock", createBlock())
