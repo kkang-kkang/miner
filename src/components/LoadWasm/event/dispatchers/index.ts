@@ -1,6 +1,5 @@
 export * from "./attachWasmErrorListener";
 export * from "./createBlock";
-export * from "./createGenesis";
 export * from "./createKeyPair";
 export * from "./createTx";
 export * from "./getBalance";

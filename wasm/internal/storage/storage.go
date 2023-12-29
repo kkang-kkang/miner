@@ -3,7 +3,10 @@ package storage
 import (
 	"context"
 	"errors"
+	"miner/internal/block"
+	"miner/internal/blockchain"
 	"syscall/js"
+	"time"
 
 	"github.com/hack-pad/go-indexeddb/idb"
 	errs "github.com/pkg/errors"
@@ -51,7 +54,19 @@ func InitDB(ctx context.Context) error {
 
 	db = d
 
-	return nil
+	b := &block.Block{
+		Header: &block.Header{
+			CurHash:    blockchain.GenesisHash(),
+			PrevHash:   blockchain.GenesisHash(),
+			DataHash:   blockchain.GenesisHash(),
+			Difficulty: 0,
+			Nonce:      0,
+			Timestamp:  time.Time{},
+		},
+	}
+
+	return InsertBlockHeader(ctx, b.Header)
+
 }
 
 func withTx(mode idb.TransactionMode, f func(tranx *idb.Transaction) error, objStoreName string, objStoreNames ...string) error {

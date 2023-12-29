@@ -1,5 +1,4 @@
 import {
-  createGenesis,
   getHeadHash,
   insertBroadcastedBlock,
   insertBroadcastedTx,
@@ -14,10 +13,6 @@ export enum ObjectStore {
 }
 
 export class DBManager {
-  public async createGenesisBlock() {
-    await createGenesis();
-  }
-
   public async insertBroadcastedBlock(block: Block) {
     await insertBroadcastedBlock(block);
   }

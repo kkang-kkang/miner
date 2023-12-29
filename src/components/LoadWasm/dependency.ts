@@ -1,5 +1,4 @@
 import { Mutex } from "async-mutex";
-import { createGenesis } from "./event/dispatchers";
 import { DBManager, PeerStorage } from "./misc";
 import {
   NetworkBrowser,
@@ -31,7 +30,6 @@ export async function initializeNode(nickname: string, token: string | null) {
   peerManager = new PeerManager(mutex, dbManager, peerStorage, networkListener);
   networkManager = new NetworkManager(networkListener, peerManager, mutex);
 
-  await createGenesis();
   await socketClient
     .connect(nickname, {
       host: gateway.host,

@@ -17,7 +17,6 @@ export enum MessageTypes {
   TX_INSERTED = "txInserted",
 
   CREATE_BLOCK = "createBlock",
-  CREATE_GENESIS = "createGenesis",
   BLOCK_CREATED = "blockCreated",
   INSERT_BLOCK = "insertBlock",
   BLOCK_INSERTED = "blockInserted",

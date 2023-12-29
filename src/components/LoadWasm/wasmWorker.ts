@@ -30,11 +30,6 @@ async function initWasmWorker() {
           postMessage(new Message(MessageTypes.BLOCK_INSERTED, {}));
           break;
         }
-        case MessageTypes.CREATE_GENESIS: {
-          await self.createGenesis();
-          postMessage(new Message(MessageTypes.BLOCK_CREATED, {}));
-          break;
-        }
         case MessageTypes.CREATE_KEY_PAIR: {
           const val = await self.createKeyPair();
           postMessage(new Message(MessageTypes.BLOCK_CREATED, val));

@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"syscall/js"
-	"time"
 
 	"github.com/pkg/errors"
 
@@ -63,31 +62,6 @@ func createBlock() any {
 
 			b, _ := json.Marshal(block)
 			return resolve.Invoke(util.ToJSObject(b))
-		}))
-	})
-}
-
-func createGenesis() any {
-	return js.FuncOf(func(this js.Value, args []js.Value) any {
-		return promise.New(promise.NewHandler(func(resolve, reject js.Value) any {
-			ctx := context.Background()
-
-			b := &block.Block{
-				Header: &block.Header{
-					CurHash:    blockchain.GenesisHash(),
-					PrevHash:   blockchain.GenesisHash(),
-					DataHash:   blockchain.GenesisHash(),
-					Difficulty: 0,
-					Nonce:      0,
-					Timestamp:  time.Time{},
-				},
-			}
-
-			if err := storage.InsertBlockHeader(ctx, b.Header); err != nil {
-				return errors.Wrap(err, "failed to insert block header")
-			}
-
-			return resolve.Invoke()
 		}))
 	})
 }

@@ -59,7 +59,6 @@ declare global {
     createNewTx: (input: TxCandidate) => Promise<Transaction>;
     insertBroadcastedBlock: (candidate: Block) => Promise<void>;
     insertBroadcastedTx: (candidate: Transaction) => Promise<void>;
-    createGenesis: () => Promise<void>;
     createKeyPair: () => Promise<KeyPair>;
     setMinerAddress: (addr: string) => Promise<void>;
     getHeadHash: () => Promise<string>;
