@@ -1,12 +1,19 @@
-import ReactDOM from "react-dom/client";
-import { LoadWasm } from "./LoadWasm";
+import { Box, ChakraProvider } from "@chakra-ui/react";
+import { createRoot } from "react-dom/client";
+import { LoadWasm } from "./components/LoadWasm";
+import PreEnter from "./components/PreEnter/PreEnter";
 import "./index.css";
-import App from "./App";
-const root = ReactDOM.createRoot(
-  document.getElementById("root") as HTMLElement
-);
+
+const root = createRoot(document.getElementById("root") as HTMLElement);
 root.render(
-  <LoadWasm>
-    <App />
-  </LoadWasm>
+  <ChakraProvider>
+    <Box
+      height={"100vh"}
+      bgColor={"#1F2428"} /* bgGradient={"linear(to-t, green.500, blue.700)" } */
+    >
+      <LoadWasm>
+        <PreEnter />
+      </LoadWasm>
+    </Box>
+  </ChakraProvider>,
 );
