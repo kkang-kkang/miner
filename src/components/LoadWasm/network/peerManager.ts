@@ -16,7 +16,7 @@ const iceServers: RTCIceServer[] = [
     ],
   },
   {
-    urls: ["turn:ec2-13-124-100-186.ap-northeast-2.compute.amazonaws.com:3478"],
+    urls: ["turn:turn.kkangkkang.store:3478"],
     username: "oneee",
     credential: "only",
   },
