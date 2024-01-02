@@ -11,7 +11,7 @@ import {
 /* eslint import/no-mutable-exports: 0 */
 
 export const gateway = {
-  host: "gateway.kkangkkang.store",
+  host: "kkangkkang.store",
   port: 443,
 };
 

@@ -94,7 +94,7 @@ export class NetworkBrowser {
   }
 
   public async fetchNickname(sid: string): Promise<string> {
-    const response = await fetch(`http://${gateway.host}:${gateway.port}/nodes/${sid}`);
+    const response = await fetch(`https://${gateway.host}:${gateway.port}/nodes/${sid}`);
 
     if (!response.ok) {
       return "";
